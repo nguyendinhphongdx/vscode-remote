@@ -4,6 +4,7 @@ import { createHttpServer } from './server/http.js';
 import { createWebSocketServer } from './server/websocket.js';
 import { startWatcher, stopWatcher } from './services/watcherService.js';
 import { closeAllTerminals } from './services/ptyService.js';
+import { closeAllTunnels } from './services/tunnelService.js';
 import { logger } from './utils/logger.js';
 
 async function main() {
@@ -32,6 +33,7 @@ async function main() {
   const shutdown = () => {
     logger.info('Shutting down.......');
     closeAllTerminals();
+    closeAllTunnels();
     stopWatcher();
     server.close(() => process.exit(0));
   };

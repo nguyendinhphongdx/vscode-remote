@@ -116,6 +116,23 @@ export interface TerminalExitEvent {
   exitCode: number;
 }
 
+// ============ Port Types ============
+
+export interface PortInfo {
+  port: number;
+  pid: number | null;
+  process: string;
+}
+
+export interface PortListResponse {
+  ports: PortInfo[];
+  forwarded: number[];
+}
+
+export interface PortForwardPayload {
+  port: number;
+}
+
 // ============ Git Types ============
 
 export type GitFileStatus = 'M' | 'A' | 'D' | 'R' | 'U' | '?' | '!';
@@ -153,6 +170,26 @@ export interface GitDiffResponse {
   diff: string;
 }
 
+// ============ Workspace Types ============
+
+export interface WorkspaceBrowsePayload {
+  path: string; // absolute path to list directories from
+}
+
+export interface WorkspaceBrowseResponse {
+  path: string;
+  entries: { name: string; path: string; type: 'directory' | 'file' }[];
+}
+
+export interface WorkspaceInfoResponse {
+  workspaceRoot: string;
+  folderName: string;
+}
+
+export interface WorkspaceChangePayload {
+  path: string; // absolute path to new workspace
+}
+
 // ============ Auth Types ============
 
 export interface AuthLoginPayload {
@@ -188,6 +225,16 @@ export const MSG = {
   TERMINAL_RESIZE: 'terminal:resize',
   TERMINAL_CLOSE: 'terminal:close',
   TERMINAL_EXIT: 'terminal:exit:event',
+
+  // Ports
+  PORT_LIST: 'port:list',
+  PORT_FORWARD: 'port:forward',
+  PORT_UNFORWARD: 'port:unforward',
+
+  // Workspace
+  WORKSPACE_INFO: 'workspace:info',
+  WORKSPACE_BROWSE: 'workspace:browse',
+  WORKSPACE_CHANGE: 'workspace:change',
 
   // Git
   GIT_STATUS: 'git:status',

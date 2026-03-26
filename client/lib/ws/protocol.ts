@@ -41,6 +41,23 @@ export interface FsWatchEvent {
   path: string;
 }
 
+export interface PortInfo {
+  port: number;
+  pid: number | null;
+  process: string;
+}
+
+export interface PortListResponse {
+  ports: PortInfo[];
+  forwarded: number[];
+  tunnelUrls: Record<number, string | null>;
+}
+
+export interface PortForwardResponse {
+  port: number;
+  tunnelUrl: string | null;
+}
+
 export type GitFileStatus = "M" | "A" | "D" | "R" | "U" | "?" | "!";
 
 export interface GitStatusEntry {
@@ -77,6 +94,22 @@ export interface TerminalExitEvent {
   exitCode: number;
 }
 
+export interface WorkspaceBrowseEntry {
+  name: string;
+  path: string;
+  type: "directory" | "file";
+}
+
+export interface WorkspaceBrowseResponse {
+  path: string;
+  entries: WorkspaceBrowseEntry[];
+}
+
+export interface WorkspaceInfoResponse {
+  workspaceRoot: string;
+  folderName: string;
+}
+
 export const MSG = {
   AUTH_LOGIN: "auth:login",
   FS_LIST: "fs:list",
@@ -93,6 +126,12 @@ export const MSG = {
   TERMINAL_RESIZE: "terminal:resize",
   TERMINAL_CLOSE: "terminal:close",
   TERMINAL_EXIT: "terminal:exit:event",
+  PORT_LIST: "port:list",
+  PORT_FORWARD: "port:forward",
+  PORT_UNFORWARD: "port:unforward",
+  WORKSPACE_INFO: "workspace:info",
+  WORKSPACE_BROWSE: "workspace:browse",
+  WORKSPACE_CHANGE: "workspace:change",
   GIT_STATUS: "git:status",
   GIT_STAGE: "git:stage",
   GIT_STAGE_ALL: "git:stage:all",

@@ -11,6 +11,29 @@ const handle = app.getRequestHandler();
 
 app.prepare().then(() => {
   const server = createServer((req, res) => {
+    // Proxy /port/* to agent port forwarding
+    if (req.url?.startsWith("/port/")) {
+      const proxyReq = httpRequest(
+        {
+          hostname: agentUrl.hostname,
+          port: agentUrl.port,
+          path: req.url,
+          method: req.method,
+          headers: { ...req.headers, host: agentUrl.host },
+        },
+        (proxyRes) => {
+          res.writeHead(proxyRes.statusCode || 502, proxyRes.headers);
+          proxyRes.pipe(res);
+        }
+      );
+      proxyReq.on("error", () => {
+        res.writeHead(502, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Port unreachable" }));
+      });
+      req.pipe(proxyReq);
+      return;
+    }
+
     // Proxy /api/agent/* to agent HTTP
     if (req.url?.startsWith("/api/agent/")) {
       const targetPath = req.url.replace("/api/agent", "");

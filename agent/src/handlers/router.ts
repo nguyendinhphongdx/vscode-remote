@@ -5,6 +5,8 @@ import { logger } from '../utils/logger.js';
 import { handleFsMessage } from './fileSystem.js';
 import { handleTerminalMessage } from './terminal.js';
 import { handleGitMessage } from './git.js';
+import { handlePortMessage } from './port.js';
+import { handleWorkspaceMessage } from './workspace.js';
 
 export function sendResponse(
   ws: WebSocket,
@@ -45,6 +47,10 @@ export async function routeMessage(ws: WebSocket, raw: string): Promise<void> {
       await handleTerminalMessage(ws, id, type, payload);
     } else if (type.startsWith('git:')) {
       await handleGitMessage(ws, id, type, payload);
+    } else if (type.startsWith('port:')) {
+      await handlePortMessage(ws, id, type, payload);
+    } else if (type.startsWith('workspace:')) {
+      await handleWorkspaceMessage(ws, id, type, payload);
     } else {
       sendResponse(ws, id, type, false, undefined, `Unknown message type: ${type}`);
     }

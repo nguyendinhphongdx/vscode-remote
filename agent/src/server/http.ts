@@ -3,6 +3,8 @@ import cors from 'cors';
 import { config, configStore } from '../config.js';
 import { signToken } from '../auth/jwt.js';
 import { verifyPassword } from '../services/passwordService.js';
+import { proxyToPort } from '../services/portService.js';
+import { isPortForwarded } from '../handlers/port.js';
 import { logger } from '../utils/logger.js';
 import { adminRoutes } from './adminRoutes.js';
 import { serveAdminUi } from './adminUi.js';
@@ -51,6 +53,25 @@ export function createHttpServer() {
     const { token, expiresAt } = signToken({ machineId });
     logger.info('Client connected via login', { machineId });
     res.json({ token, expiresAt });
+  });
+
+  // Port forwarding proxy: /port/:port/*
+  app.all('/port/:port/*', (req, res) => {
+    const port = parseInt(req.params.port, 10);
+    if (isNaN(port) || !isPortForwarded(port)) {
+      res.status(403).json({ error: `Port ${port} is not forwarded` });
+      return;
+    }
+    proxyToPort(port, req, res, `/port/${port}`);
+  });
+
+  app.all('/port/:port', (req, res) => {
+    const port = parseInt(req.params.port, 10);
+    if (isNaN(port) || !isPortForwarded(port)) {
+      res.status(403).json({ error: `Port ${port} is not forwarded` });
+      return;
+    }
+    proxyToPort(port, req, res, `/port/${port}`);
   });
 
   // Admin UI - serve HTML when browser visits root

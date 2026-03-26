@@ -16,12 +16,13 @@ import { useTerminal } from "@/lib/hooks/useTerminal";
 import { useTerminalStore } from "@/store/terminalStore";
 import { useGitStore } from "@/store/gitStore";
 import { useWebSocket } from "@/components/providers/WebSocketProvider";
-import { Files, Terminal, GitBranch } from "lucide-react";
+import { PortsPanel } from "@/components/ports/PortsPanel";
+import { Files, Terminal, GitBranch, Radio } from "lucide-react";
 
 export function AppShell() {
   const [sidebarWidth, setSidebarWidth] = useState(260);
   const [terminalHeight, setTerminalHeight] = useState(250);
-  const [activeSidebar, setActiveSidebar] = useState<"explorer" | "scm" | null>("explorer");
+  const [activeSidebar, setActiveSidebar] = useState<"explorer" | "scm" | "ports" | null>("explorer");
   const [showTerminal, setShowTerminal] = useState(false);
   const [terminalMaximized, setTerminalMaximized] = useState(false);
 
@@ -32,7 +33,7 @@ export function AppShell() {
   const { changeCount } = useGitStore();
   const { status } = useWebSocket();
 
-  const toggleSidebar = (panel: "explorer" | "scm") => {
+  const toggleSidebar = (panel: "explorer" | "scm" | "ports") => {
     setActiveSidebar((prev) => (prev === panel ? null : panel));
   };
 
@@ -119,6 +120,17 @@ export function AppShell() {
           >
             <Terminal size={22} strokeWidth={1.5} />
           </button>
+          <button
+            onClick={() => toggleSidebar("ports")}
+            className={`w-12 h-12 flex items-center justify-center relative transition-colors ${
+              activeSidebar === "ports"
+                ? "text-text-primary before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-[2px] before:h-6 before:bg-accent before:rounded-r"
+                : "text-text-muted hover:text-text-primary"
+            }`}
+            title="Ports"
+          >
+            <Radio size={22} strokeWidth={1.5} />
+          </button>
         </div>
 
         {/* Sidebar */}
@@ -130,6 +142,7 @@ export function AppShell() {
             >
               {activeSidebar === "explorer" && <FileExplorer />}
               {activeSidebar === "scm" && <SourceControl />}
+              {activeSidebar === "ports" && <PortsPanel />}
             </div>
             <ResizeHandle
               direction="horizontal"

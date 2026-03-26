@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useWebSocket } from "@/components/providers/WebSocketProvider";
 import { useGitStore } from "@/store/gitStore";
+import { useWorkspaceStore } from "@/store/workspaceStore";
+import { WorkspacePicker } from "./WorkspacePicker";
+import { MSG, type WorkspaceInfoResponse } from "@/lib/ws/protocol";
 import {
   Search,
   Settings,
@@ -109,7 +112,6 @@ const menus: Menu[] = [
 export function TitleBar() {
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const menuBarRef = useRef<HTMLDivElement>(null);
-  const { status } = useWebSocket();
   const { branch } = useGitStore();
 
   // Close menu when clicking outside
@@ -134,7 +136,28 @@ export function TitleBar() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [activeMenu]);
 
-  const projectName = "vscode-remote";
+  const { ws, status } = useWebSocket();
+  const { folderName, setWorkspace } = useWorkspaceStore();
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  // Fetch workspace info on connect
+  const fetchWorkspaceInfo = useCallback(async () => {
+    if (!ws) return;
+    try {
+      const result = await ws.send<WorkspaceInfoResponse>(MSG.WORKSPACE_INFO, {});
+      setWorkspace(result.workspaceRoot, result.folderName);
+    } catch {
+      // ignore
+    }
+  }, [ws, setWorkspace]);
+
+  useEffect(() => {
+    if (status === "connected") {
+      fetchWorkspaceInfo();
+    }
+  }, [status, fetchWorkspaceInfo]);
+
+  const projectName = folderName || "vscode-remote";
 
   return (
     <div className="h-[30px] bg-[#3c3c3c] flex items-center select-none shrink-0 text-[12px] text-[#cccccc]">
@@ -201,7 +224,10 @@ export function TitleBar() {
 
       {/* Center: Title / Search */}
       <div className="flex-1 flex justify-center">
-        <button className="flex items-center gap-2 px-3 py-[2px] bg-[#505050] hover:bg-[#5a5a5a] rounded-md text-[12px] text-[#999] min-w-[200px] max-w-[500px] w-[40%] justify-center">
+        <button
+          onClick={() => setPickerOpen(true)}
+          className="flex items-center gap-2 px-3 py-[2px] bg-[#505050] hover:bg-[#5a5a5a] rounded-md text-[12px] text-[#999] min-w-[200px] max-w-[500px] w-[40%] justify-center"
+        >
           <Search size={12} />
           <span>
             {projectName}
@@ -210,6 +236,8 @@ export function TitleBar() {
           </span>
         </button>
       </div>
+
+      <WorkspacePicker open={pickerOpen} onClose={() => setPickerOpen(false)} />
 
       {/* Right: Settings + Window controls */}
       <div className="flex items-center h-full shrink-0">
