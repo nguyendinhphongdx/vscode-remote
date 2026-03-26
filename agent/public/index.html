@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VS Code Remote Agent</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1e1e1e; color: #d4d4d4; min-height: 100vh;
+      display: flex; justify-content: center; padding: 40px 20px;
+    }
+    .container { max-width: 560px; width: 100%; }
+    h1 { color: #569cd6; font-size: 24px; margin-bottom: 8px; }
+    .subtitle { color: #808080; font-size: 13px; margin-bottom: 32px; }
+    .card {
+      background: #252526; border: 1px solid #3c3c3c; border-radius: 8px;
+      padding: 20px; margin-bottom: 16px;
+    }
+    .card-title { color: #9cdcfe; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+    .machine-id {
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 36px; color: #dcdcaa; letter-spacing: 4px;
+      text-align: center; padding: 16px 0; user-select: all; cursor: pointer;
+    }
+    .machine-id:hover { color: #fff; }
+    .copy-hint { text-align: center; color: #6a9955; font-size: 12px; margin-top: 4px; min-height: 18px; }
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+    label { display: block; color: #808080; font-size: 12px; margin-bottom: 4px; }
+    .value {
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 18px; color: #ce9178; padding: 6px 0;
+    }
+    .row { display: flex; align-items: center; gap: 10px; }
+    .row .value { flex: 1; }
+    input[type="text"], input[type="password"], input[type="number"] {
+      background: #3c3c3c; border: 1px solid #555; border-radius: 4px;
+      color: #d4d4d4; padding: 8px 12px; font-size: 14px; width: 100%;
+      font-family: inherit; outline: none;
+    }
+    input:focus { border-color: #569cd6; }
+    button {
+      background: #0e639c; color: #fff; border: none; border-radius: 4px;
+      padding: 8px 16px; font-size: 13px; cursor: pointer; white-space: nowrap;
+    }
+    button:hover { background: #1177bb; }
+    button.secondary { background: #3c3c3c; }
+    button.secondary:hover { background: #505050; }
+    button.danger { background: #c72e2e; }
+    button.danger:hover { background: #e03e3e; }
+    .status-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+    .status-label { color: #808080; }
+    .status-value { color: #4ec9b0; font-family: monospace; }
+    .inline-form { display: flex; gap: 8px; align-items: center; }
+    .inline-form input { flex: 1; }
+    .msg { font-size: 12px; margin-top: 6px; min-height: 16px; }
+    .msg.ok { color: #6a9955; }
+    .msg.err { color: #f44747; }
+    hr { border: none; border-top: 1px solid #3c3c3c; margin: 14px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>VS Code Remote Agent</h1>
+    <p class="subtitle">Remote development server</p>
+
+    <!-- Machine ID -->
+    <div class="card">
+      <div class="card-title">Machine ID</div>
+      <div class="machine-id" id="machineId" onclick="copyId()">---</div>
+      <div class="copy-hint" id="copyHint">Click to copy</div>
+    </div>
+
+    <!-- Password -->
+    <div class="card">
+      <div class="card-title">Password</div>
+      <div class="field">
+        <label>Random Password</label>
+        <div class="row">
+          <div class="value" id="randomPwd">---</div>
+          <button onclick="regenerate()">Regenerate</button>
+        </div>
+      </div>
+      <hr>
+      <div class="field">
+        <label>Fixed Password</label>
+        <div id="fixedStatus"></div>
+        <div class="inline-form" style="margin-top: 8px;">
+          <input type="password" id="fixedInput" placeholder="Set fixed password (min 4 chars)">
+          <button onclick="setFixed()">Set</button>
+          <button class="danger" onclick="clearFixed()">Clear</button>
+        </div>
+        <div class="msg" id="fixedMsg"></div>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div class="card">
+      <div class="card-title">Status</div>
+      <div class="status-row">
+        <span class="status-label">Connections</span>
+        <span class="status-value" id="connCount">0</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Port</span>
+        <span class="status-value" id="port">---</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Workspace</span>
+        <span class="status-value" id="workspace" style="font-size:12px; word-break:break-all;">---</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Uptime</span>
+        <span class="status-value" id="uptime">---</span>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="card">
+      <div class="card-title">Settings</div>
+      <div class="field">
+        <label>Workspace Root</label>
+        <div class="inline-form">
+          <input type="text" id="settingsWorkspace">
+          <button onclick="saveSettings()">Save</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Max Connections</label>
+        <input type="number" id="settingsMaxConn" min="1" max="50" style="width:80px;">
+      </div>
+      <div class="msg" id="settingsMsg"></div>
+    </div>
+  </div>
+
+  <script>
+    const API = window.location.origin + '/api/admin';
+
+    async function fetchStatus() {
+      try {
+        const res = await fetch(API + '/status');
+        const d = await res.json();
+        document.getElementById('machineId').textContent = d.machineId;
+        document.getElementById('connCount').textContent = d.connections;
+        document.getElementById('port').textContent = d.port;
+        document.getElementById('workspace').textContent = d.workspaceRoot;
+        const m = Math.floor(d.uptime / 60), s = d.uptime % 60;
+        const h = Math.floor(m / 60);
+        document.getElementById('uptime').textContent =
+          h > 0 ? `${h}h ${m % 60}m` : `${m}m ${s}s`;
+      } catch {}
+    }
+
+    async function fetchPasswords() {
+      try {
+        const res = await fetch(API + '/password');
+        const d = await res.json();
+        document.getElementById('randomPwd').textContent = d.randomPassword || '(none)';
+        document.getElementById('fixedStatus').innerHTML = d.hasFixedPassword
+          ? '<span style="color:#4ec9b0">&#10003; Fixed password is set</span>'
+          : '<span style="color:#808080">No fixed password</span>';
+      } catch {}
+    }
+
+    async function fetchSettings() {
+      try {
+        const res = await fetch(API + '/settings');
+        const d = await res.json();
+        document.getElementById('settingsWorkspace').value = d.workspaceRoot;
+        document.getElementById('settingsMaxConn').value = d.maxConnections;
+      } catch {}
+    }
+
+    function copyId() {
+      const id = document.getElementById('machineId').textContent;
+      navigator.clipboard.writeText(id).then(() => {
+        const h = document.getElementById('copyHint');
+        h.textContent = 'Copied!';
+        setTimeout(() => h.textContent = 'Click to copy', 2000);
+      });
+    }
+
+    async function regenerate() {
+      const res = await fetch(API + '/password/regenerate', { method: 'POST' });
+      const d = await res.json();
+      document.getElementById('randomPwd').textContent = d.randomPassword;
+    }
+
+    async function setFixed() {
+      const pwd = document.getElementById('fixedInput').value;
+      const msg = document.getElementById('fixedMsg');
+      if (pwd.length < 4) { msg.className = 'msg err'; msg.textContent = 'Min 4 characters'; return; }
+      const res = await fetch(API + '/password/fixed', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwd })
+      });
+      if (res.ok) {
+        msg.className = 'msg ok'; msg.textContent = 'Fixed password set!';
+        document.getElementById('fixedInput').value = '';
+        fetchPasswords();
+      } else {
+        const d = await res.json();
+        msg.className = 'msg err'; msg.textContent = d.error;
+      }
+      setTimeout(() => msg.textContent = '', 3000);
+    }
+
+    async function clearFixed() {
+      await fetch(API + '/password/fixed', { method: 'DELETE' });
+      const msg = document.getElementById('fixedMsg');
+      msg.className = 'msg ok'; msg.textContent = 'Fixed password cleared';
+      fetchPasswords();
+      setTimeout(() => msg.textContent = '', 3000);
+    }
+
+    async function saveSettings() {
+      const msg = document.getElementById('settingsMsg');
+      const res = await fetch(API + '/settings', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workspaceRoot: document.getElementById('settingsWorkspace').value,
+          maxConnections: parseInt(document.getElementById('settingsMaxConn').value, 10),
+        })
+      });
+      if (res.ok) {
+        msg.className = 'msg ok'; msg.textContent = 'Settings saved!';
+      } else {
+        msg.className = 'msg err'; msg.textContent = 'Failed to save';
+      }
+      setTimeout(() => msg.textContent = '', 3000);
+    }
+
+    // Initial load
+    fetchStatus();
+    fetchPasswords();
+    fetchSettings();
+
+    // Poll status
+    setInterval(fetchStatus, 5000);
+  </script>
+</body>
+</html>
