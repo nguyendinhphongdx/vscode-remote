@@ -29,7 +29,7 @@ export default function EditorPage() {
     const storedMid = getMachineId();
 
     if (!token || isTokenExpired(token) || storedMid !== machineId) {
-      router.replace(`/login?machineId=${machineId}`);
+      router.replace(`/`);
       return;
     }
 
@@ -50,14 +50,14 @@ export default function EditorPage() {
     if (timeLeft <= 0) {
       clearToken();
       clearMachineId();
-      router.replace(`/login?machineId=${machineId}&expired=1`);
+      router.replace(`/&expired=1`);
       return;
     }
 
     const timer = setTimeout(() => {
       clearToken();
       clearMachineId();
-      router.replace(`/login?machineId=${machineId}&expired=1`);
+      router.replace(`/&expired=1`);
     }, timeLeft);
 
     return () => clearTimeout(timer);

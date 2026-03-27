@@ -88,7 +88,7 @@ function disconnectWs() {
 }
 
 export function WebSocketProvider({ children }: { children: ReactNode }) {
-  const { token, machineId } = useAuth();
+  const { token, machineId, logout } = useAuth();
   const store = useSyncExternalStore(subscribeWs, getWsSnapshot, () => serverSnapshot);
 
   useEffect(() => {
@@ -98,6 +98,14 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       disconnectWs();
     }
   }, [token, machineId]);
+
+  // Force logout when token is rejected by server
+  useEffect(() => {
+    if (store.status === "auth_expired") {
+      disconnectWs();
+      logout();
+    }
+  }, [store.status, logout]);
 
   return (
     <WSContext.Provider value={store}>

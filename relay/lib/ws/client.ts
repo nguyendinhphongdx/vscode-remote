@@ -9,7 +9,7 @@ interface PendingRequest {
   timeout: ReturnType<typeof setTimeout>;
 }
 
-export type ConnectionStatus = "connecting" | "connected" | "disconnected";
+export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "auth_expired";
 
 export class WebSocketClient {
   private ws: WebSocket | null = null;
@@ -20,6 +20,7 @@ export class WebSocketClient {
   private reconnectDelay = 1000;
   private maxReconnectDelay = 30000;
   private shouldReconnect = true;
+  private consecutiveQuickFailures = 0;
 
   constructor(
     private url: string,
@@ -39,6 +40,7 @@ export class WebSocketClient {
     this.ws.onopen = () => {
       console.log("[ws] Connected");
       this.reconnectDelay = 1000;
+      this.consecutiveQuickFailures = 0;
       this.notifyStatus("connected");
     };
 
@@ -48,15 +50,26 @@ export class WebSocketClient {
 
     this.ws.onclose = (event) => {
       console.log("[ws] Closed, code:", event.code, "reason:", event.reason, "shouldReconnect:", this.shouldReconnect);
-      this.notifyStatus("disconnected");
+
       this.rejectAllPending();
-      if (this.shouldReconnect) {
-        // If closed very quickly after opening, retry fast (likely agent was reconnecting)
-        const elapsed = Date.now() - connectStart;
-        if (elapsed < 3000) {
-          console.log("[ws] Connection closed quickly, retrying in 1s...");
-          this.reconnectDelay = 1000;
+
+      // Track consecutive quick failures (connection rejected before opening)
+      const elapsed = Date.now() - connectStart;
+      if (elapsed < 2000) {
+        this.consecutiveQuickFailures++;
+        // 3+ consecutive quick failures = likely auth issue, stop retrying
+        if (this.consecutiveQuickFailures >= 3) {
+          console.log("[ws] Too many quick failures, likely auth expired");
+          this.shouldReconnect = false;
+          this.notifyStatus("auth_expired");
+          return;
         }
+      } else {
+        this.consecutiveQuickFailures = 0;
+      }
+
+      this.notifyStatus("disconnected");
+      if (this.shouldReconnect) {
         this.scheduleReconnect();
       }
     };

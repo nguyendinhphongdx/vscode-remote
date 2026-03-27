@@ -4,10 +4,13 @@ import { WebSocketServer, WebSocket, type RawData } from "ws";
 import { v4 as uuid } from "uuid";
 import crypto from "crypto";
 import next from "next";
+import { loadEnvConfig } from "@next/env";
+
+loadEnvConfig(process.cwd());
 
 const dev = process.env.NODE_ENV !== "production";
 const port = parseInt(process.env.PORT || "9001", 10);
-const relaySecret = process.env.RELAY_SECRET || "dev-secret";
+const relaySecret = process.env.RELAY_SECRET;
 const adminPassword = process.env.ADMIN_PASSWORD || "";
 const adminTokenSecret = crypto.randomBytes(32).toString("hex");
 
@@ -153,8 +156,12 @@ function handleAgentConnection(ws: WebSocket) {
 
   ws.on("close", () => {
     if (agentMachineId) {
-      agents.delete(agentMachineId);
-      console.log(`[relay] Agent disconnected: ${agentMachineId}`);
+      // Only remove if this is still the active agent (not replaced by a new connection)
+      const current = agents.get(agentMachineId);
+      if (current && current.ws === ws) {
+        agents.delete(agentMachineId);
+        console.log(`[relay] Agent disconnected: ${agentMachineId}`);
+      }
     }
   });
 
@@ -432,6 +439,9 @@ app.prepare().then(() => {
         // Verify token via agent before allowing connection
         const verifyResult = await verifyTokenViaAgent(machineId, token);
         if (!verifyResult.success) {
+          console.log(`[relay] Browser WS rejected for ${machineId}: ${verifyResult.error}`);
+          // Reject with HTTP 401 before upgrading
+          socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
           socket.destroy();
           return;
         }

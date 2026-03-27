@@ -5,6 +5,7 @@ import { stopWatcher, onFileChange } from './services/watcherService.js';
 import { closeAllTerminals } from './services/ptyService.js';
 import { MSG } from './protocol.js';
 import { logger } from './utils/logger.js';
+import { AGENT_SECRET } from './constants.js';
 
 async function main() {
   await configStore.initialize();
@@ -19,6 +20,7 @@ async function main() {
     logger.info(`  Password   : ${store.passwords.random.displayValue}`);
   }
   logger.info(`  Relay      : ${config.relayUrl}`);
+  logger.info(`  Secret      : ${AGENT_SECRET}`);
   logger.info('='.repeat(40));
 
   // Create relay client (outbound WS to relay server)

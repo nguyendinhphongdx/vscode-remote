@@ -9,7 +9,6 @@
   },
   "settings": {
     "relayUrl": "ws://localhost:9001/api/agent-ws",
-    "agentSecret": "dev-secret",
     "localPort": 9000,
     "workspaceRoot": "/home/dinhphong/Documents/Cá nhân/vscode-remote",
     "maxTerminals": 5,

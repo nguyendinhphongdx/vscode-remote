@@ -1,13 +1,7 @@
-const CACHE_NAME = "vsremote-v1";
-const PRECACHE_URLS = ["/editor", "/login"];
+const CACHE_NAME = "vsremote-v2";
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then((cache) => cache.addAll(PRECACHE_URLS))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", (event) => {
@@ -31,14 +25,16 @@ self.addEventListener("fetch", (event) => {
   // Skip WebSocket and non-GET requests
   if (request.url.startsWith("ws") || request.method !== "GET") return;
 
-  // Network-first for navigation, cache-first for static assets
+  // Network-first for navigation
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() => caches.match(request))
+      fetch(request).catch(() => caches.match(request) || caches.match("/"))
     );
-  } else if (
-    request.url.match(/\.(js|css|png|jpg|svg|ico|woff2?)(\?.*)?$/)
-  ) {
+    return;
+  }
+
+  // Cache-first for static assets
+  if (request.url.match(/\.(js|css|png|jpg|svg|ico|woff2?)(\?.*)?$/)) {
     event.respondWith(
       caches.match(request).then(
         (cached) =>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Globe, X, ExternalLink, RotateCw, Copy, Check } from "lucide-react";
 
 interface PortPreviewProps {
@@ -13,6 +13,12 @@ export function PortPreview({ port, url, onClose }: PortPreviewProps) {
   const [currentUrl, setCurrentUrl] = useState(url);
   const [iframeKey, setIframeKey] = useState(0);
   const [copied, setCopied] = useState(false);
+
+  // Update when switching to a different port
+  useEffect(() => {
+    setCurrentUrl(url);
+    setIframeKey((k) => k + 1);
+  }, [url, port]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(currentUrl);
