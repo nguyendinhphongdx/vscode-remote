@@ -33,7 +33,11 @@ async function main() {
   // Start local HTTP server (agent UI at localhost)
   createLocalServer(relayClient);
 
-  logger.info(`Workspace: ${config.workspaceRoot}`);
+  if (config.workspaceRoot) {
+    logger.info(`Workspace: ${config.workspaceRoot}`);
+  } else {
+    logger.info('No workspace folder set (will be selected from browser)');
+  }
 
   // Graceful shutdown
   const shutdown = () => {

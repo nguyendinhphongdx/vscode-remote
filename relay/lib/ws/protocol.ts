@@ -106,8 +106,8 @@ export interface WorkspaceBrowseResponse {
 }
 
 export interface WorkspaceInfoResponse {
-  workspaceRoot: string;
-  folderName: string;
+  workspaceRoot: string | null;
+  folderName: string | null;
 }
 
 export const MSG = {

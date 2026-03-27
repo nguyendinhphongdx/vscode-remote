@@ -7,6 +7,7 @@ import { useFileSystem } from "@/lib/hooks/useFileSystem";
 import { useEditor } from "@/lib/hooks/useEditor";
 import { FileContextMenu } from "./FileContextMenu";
 import { NewFileDialog } from "./NewFileDialog";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { getFileIconComponent, getFolderIconComponent } from "@/lib/utils/fileIcons";
 import type { FileEntry } from "@/lib/ws/protocol";
 import { ChevronRight, ChevronDown } from "lucide-react";
@@ -24,6 +25,7 @@ export function FileTreeNode({ entry, depth }: FileTreeNodeProps) {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [creating, setCreating] = useState<"file" | "directory" | null>(null);
   const [renaming, setRenaming] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const nodeRef = useRef<HTMLDivElement>(null);
 
   const isDir = entry.type === "directory";
@@ -77,15 +79,18 @@ export function FileTreeNode({ entry, depth }: FileTreeNodeProps) {
     setContextMenu({ x: e.clientX, y: e.clientY });
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     setContextMenu(null);
-    if (confirm(`Delete "${entry.name}"?`)) {
-      await deleteEntry(entry.path);
-      const parentPath = entry.path.includes("/")
-        ? entry.path.substring(0, entry.path.lastIndexOf("/"))
-        : ".";
-      listDirectory(parentPath);
-    }
+    setConfirmDelete(true);
+  };
+
+  const doDelete = async () => {
+    setConfirmDelete(false);
+    await deleteEntry(entry.path);
+    const parentPath = entry.path.includes("/")
+      ? entry.path.substring(0, entry.path.lastIndexOf("/"))
+      : ".";
+    listDirectory(parentPath);
   };
 
   const handleRename = async (newName: string) => {
@@ -214,6 +219,15 @@ export function FileTreeNode({ entry, depth }: FileTreeNodeProps) {
           ))}
         </>
       )}
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Delete File"
+        message={`Are you sure you want to delete "${entry.name}"?`}
+        confirmLabel="Delete"
+        onConfirm={doDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   );
 }

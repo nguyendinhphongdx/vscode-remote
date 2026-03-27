@@ -38,7 +38,7 @@ async function createDefaultConfig(): Promise<PersistedConfig> {
       relayUrl: process.env.RELAY_URL || 'ws://localhost:9001/api/agent-ws',
       agentSecret: process.env.AGENT_SECRET || crypto.randomBytes(32).toString('hex'),
       localPort: parseInt(process.env.LOCAL_PORT || '9000', 10),
-      workspaceRoot: path.resolve(process.env.WORKSPACE_ROOT || process.cwd()),
+      workspaceRoot: process.env.WORKSPACE_ROOT ? path.resolve(process.env.WORKSPACE_ROOT) : null,
       maxTerminals: 5,
       maxFileSize: 10 * 1024 * 1024,
       jwtSecret: crypto.randomBytes(64).toString('hex'),

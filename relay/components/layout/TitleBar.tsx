@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useWebSocket } from "@/components/providers/WebSocketProvider";
 import { useGitStore } from "@/store/gitStore";
 import { useWorkspaceStore } from "@/store/workspaceStore";
-import { WorkspacePicker } from "./WorkspacePicker";
 import { MSG, type WorkspaceInfoResponse } from "@/lib/ws/protocol";
 import {
   Search,
@@ -19,6 +18,7 @@ interface MenuItem {
   shortcut?: string;
   divider?: boolean;
   disabled?: boolean;
+  action?: () => void;
 }
 
 interface Menu {
@@ -26,93 +26,96 @@ interface Menu {
   items: MenuItem[];
 }
 
-const menus: Menu[] = [
-  {
-    label: "File",
-    items: [
-      { label: "New File", shortcut: "Ctrl+N" },
-      { label: "New Folder" },
-      { label: "divider", divider: true },
-      { label: "Open File...", shortcut: "Ctrl+O", disabled: true },
-      { label: "Open Folder...", disabled: true },
-      { label: "divider", divider: true },
-      { label: "Save", shortcut: "Ctrl+S" },
-      { label: "Save All", shortcut: "Ctrl+Shift+S", disabled: true },
-      { label: "divider", divider: true },
-      { label: "Preferences", disabled: true },
-    ],
-  },
-  {
-    label: "Edit",
-    items: [
-      { label: "Undo", shortcut: "Ctrl+Z" },
-      { label: "Redo", shortcut: "Ctrl+Shift+Z" },
-      { label: "divider", divider: true },
-      { label: "Cut", shortcut: "Ctrl+X" },
-      { label: "Copy", shortcut: "Ctrl+C" },
-      { label: "Paste", shortcut: "Ctrl+V" },
-      { label: "divider", divider: true },
-      { label: "Find", shortcut: "Ctrl+F" },
-      { label: "Replace", shortcut: "Ctrl+H" },
-    ],
-  },
-  {
-    label: "Selection",
-    items: [
-      { label: "Select All", shortcut: "Ctrl+A" },
-      { label: "Expand Selection", shortcut: "Shift+Alt+→", disabled: true },
-      { label: "Shrink Selection", shortcut: "Shift+Alt+←", disabled: true },
-      { label: "divider", divider: true },
-      { label: "Copy Line Up", shortcut: "Shift+Alt+↑", disabled: true },
-      { label: "Copy Line Down", shortcut: "Shift+Alt+↓", disabled: true },
-    ],
-  },
-  {
-    label: "View",
-    items: [
-      { label: "Explorer", shortcut: "Ctrl+Shift+E" },
-      { label: "Search", shortcut: "Ctrl+Shift+F", disabled: true },
-      { label: "Source Control", shortcut: "Ctrl+Shift+G", disabled: true },
-      { label: "divider", divider: true },
-      { label: "Terminal", shortcut: "Ctrl+`" },
-      { label: "divider", divider: true },
-      { label: "Word Wrap", shortcut: "Alt+Z", disabled: true },
-    ],
-  },
-  {
-    label: "Go",
-    items: [
-      { label: "Go to File...", shortcut: "Ctrl+P", disabled: true },
-      { label: "Go to Symbol...", shortcut: "Ctrl+Shift+O", disabled: true },
-      { label: "Go to Line...", shortcut: "Ctrl+G", disabled: true },
-      { label: "divider", divider: true },
-      { label: "Go to Definition", shortcut: "F12", disabled: true },
-      { label: "Go to References", shortcut: "Shift+F12", disabled: true },
-    ],
-  },
-  {
-    label: "Terminal",
-    items: [
-      { label: "New Terminal", shortcut: "Ctrl+Shift+`" },
-      { label: "divider", divider: true },
-      { label: "Run Task...", disabled: true },
-      { label: "Run Build Task...", shortcut: "Ctrl+Shift+B", disabled: true },
-    ],
-  },
-  {
-    label: "Help",
-    items: [
-      { label: "Keyboard Shortcuts", shortcut: "Ctrl+K Ctrl+S", disabled: true },
-      { label: "divider", divider: true },
-      { label: "About", disabled: true },
-    ],
-  },
-];
+interface TitleBarProps {
+  onOpenFolder?: () => void;
+}
 
-export function TitleBar() {
+export function TitleBar({ onOpenFolder }: TitleBarProps) {
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const menuBarRef = useRef<HTMLDivElement>(null);
   const { branch } = useGitStore();
+
+  const menus: Menu[] = [
+    {
+      label: "File",
+      items: [
+        { label: "New File", shortcut: "Ctrl+N" },
+        { label: "New Folder" },
+        { label: "divider", divider: true },
+        { label: "Open Folder...", action: onOpenFolder },
+        { label: "divider", divider: true },
+        { label: "Save", shortcut: "Ctrl+S" },
+        { label: "Save All", shortcut: "Ctrl+Shift+S", disabled: true },
+        { label: "divider", divider: true },
+        { label: "Preferences", disabled: true },
+      ],
+    },
+    {
+      label: "Edit",
+      items: [
+        { label: "Undo", shortcut: "Ctrl+Z" },
+        { label: "Redo", shortcut: "Ctrl+Shift+Z" },
+        { label: "divider", divider: true },
+        { label: "Cut", shortcut: "Ctrl+X" },
+        { label: "Copy", shortcut: "Ctrl+C" },
+        { label: "Paste", shortcut: "Ctrl+V" },
+        { label: "divider", divider: true },
+        { label: "Find", shortcut: "Ctrl+F" },
+        { label: "Replace", shortcut: "Ctrl+H" },
+      ],
+    },
+    {
+      label: "Selection",
+      items: [
+        { label: "Select All", shortcut: "Ctrl+A" },
+        { label: "Expand Selection", shortcut: "Shift+Alt+→", disabled: true },
+        { label: "Shrink Selection", shortcut: "Shift+Alt+←", disabled: true },
+        { label: "divider", divider: true },
+        { label: "Copy Line Up", shortcut: "Shift+Alt+↑", disabled: true },
+        { label: "Copy Line Down", shortcut: "Shift+Alt+↓", disabled: true },
+      ],
+    },
+    {
+      label: "View",
+      items: [
+        { label: "Explorer", shortcut: "Ctrl+Shift+E" },
+        { label: "Search", shortcut: "Ctrl+Shift+F", disabled: true },
+        { label: "Source Control", shortcut: "Ctrl+Shift+G", disabled: true },
+        { label: "divider", divider: true },
+        { label: "Terminal", shortcut: "Ctrl+`" },
+        { label: "divider", divider: true },
+        { label: "Word Wrap", shortcut: "Alt+Z", disabled: true },
+      ],
+    },
+    {
+      label: "Go",
+      items: [
+        { label: "Go to File...", shortcut: "Ctrl+P", disabled: true },
+        { label: "Go to Symbol...", shortcut: "Ctrl+Shift+O", disabled: true },
+        { label: "Go to Line...", shortcut: "Ctrl+G", disabled: true },
+        { label: "divider", divider: true },
+        { label: "Go to Definition", shortcut: "F12", disabled: true },
+        { label: "Go to References", shortcut: "Shift+F12", disabled: true },
+      ],
+    },
+    {
+      label: "Terminal",
+      items: [
+        { label: "New Terminal", shortcut: "Ctrl+Shift+`" },
+        { label: "divider", divider: true },
+        { label: "Run Task...", disabled: true },
+        { label: "Run Build Task...", shortcut: "Ctrl+Shift+B", disabled: true },
+      ],
+    },
+    {
+      label: "Help",
+      items: [
+        { label: "Keyboard Shortcuts", shortcut: "Ctrl+K Ctrl+S", disabled: true },
+        { label: "divider", divider: true },
+        { label: "About", disabled: true },
+      ],
+    },
+  ];
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -138,7 +141,6 @@ export function TitleBar() {
 
   const { ws, status } = useWebSocket();
   const { folderName, setWorkspace } = useWorkspaceStore();
-  const [pickerOpen, setPickerOpen] = useState(false);
 
   // Fetch workspace info on connect
   const fetchWorkspaceInfo = useCallback(async () => {
@@ -157,10 +159,10 @@ export function TitleBar() {
     }
   }, [status, fetchWorkspaceInfo]);
 
-  const projectName = folderName || "vscode-remote";
+  const projectName = folderName || "No Folder Opened";
 
   return (
-    <div className="h-[30px] bg-[#3c3c3c] flex items-center select-none shrink-0 text-[12px] text-[#cccccc]">
+    <div className="relative h-[30px] bg-[#3c3c3c] flex items-center select-none shrink-0 text-[12px] text-[#cccccc]">
       {/* App icon */}
       <div className="w-12 flex items-center justify-center shrink-0">
         <svg width="16" height="16" viewBox="0 0 100 100" className="text-[#007acc]">
@@ -172,8 +174,8 @@ export function TitleBar() {
         </svg>
       </div>
 
-      {/* Menu bar */}
-      <div ref={menuBarRef} className="flex items-center h-full">
+      {/* Menu bar — hidden on mobile */}
+      <div ref={menuBarRef} className="hidden sm:flex items-center h-full">
         {menus.map((menu, idx) => (
           <div key={menu.label} className="relative h-full">
             <button
@@ -203,7 +205,10 @@ export function TitleBar() {
                           : "text-[#cccccc] hover:bg-[#094771]"
                       }`}
                       onClick={() => {
-                        if (!item.disabled) setActiveMenu(null);
+                        if (!item.disabled) {
+                          setActiveMenu(null);
+                          item.action?.();
+                        }
                       }}
                       disabled={item.disabled}
                     >
@@ -222,25 +227,22 @@ export function TitleBar() {
         ))}
       </div>
 
-      {/* Center: Title / Search */}
-      <div className="flex-1 flex justify-center">
-        <button
-          onClick={() => setPickerOpen(true)}
-          className="flex items-center gap-2 px-3 py-[2px] bg-[#505050] hover:bg-[#5a5a5a] rounded-md text-[12px] text-[#999] min-w-[200px] max-w-[500px] w-[40%] justify-center"
-        >
-          <Search size={12} />
-          <span>
-            {projectName}
-            {branch ? ` (${branch})` : ""}
-            {status !== "connected" ? " — Disconnected" : ""}
-          </span>
-        </button>
-      </div>
+      {/* Center: Title / Search — positioned at viewport center */}
+      <div className="flex-1" />
+      <button
+        onClick={onOpenFolder}
+        className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-[2px] bg-[#505050] hover:bg-[#5a5a5a] rounded-md text-[12px] text-[#999] w-[70%] sm:w-[40%] sm:min-w-[200px] max-w-[500px] justify-center truncate"
+      >
+        <Search size={12} />
+        <span>
+          {projectName}
+          {branch ? ` (${branch})` : ""}
+          {status !== "connected" ? " — Disconnected" : ""}
+        </span>
+      </button>
 
-      <WorkspacePicker open={pickerOpen} onClose={() => setPickerOpen(false)} />
-
-      {/* Right: Settings + Window controls */}
-      <div className="flex items-center h-full shrink-0">
+      {/* Right: Settings + Window controls — hidden on mobile */}
+      <div className="hidden sm:flex items-center h-full shrink-0">
         <button className="p-2 hover:bg-[#505050] h-full flex items-center" title="Settings">
           <Settings size={14} />
         </button>

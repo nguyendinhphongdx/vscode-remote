@@ -7,10 +7,11 @@ import { EditorTabs } from "@/components/editor/EditorTabs";
 import { MonacoEditor } from "@/components/editor/MonacoEditor";
 import { WelcomeTab } from "@/components/editor/WelcomeTab";
 import { TerminalComponent } from "@/components/terminal/Terminal";
-import { TerminalTabs } from "@/components/terminal/TerminalTabs";
+import { TerminalTabs, type TerminalPosition } from "@/components/terminal/TerminalTabs";
 import { TitleBar } from "./TitleBar";
 import { StatusBar } from "./StatusBar";
 import { ResizeHandle } from "./ResizeHandle";
+import { WorkspacePicker } from "./WorkspacePicker";
 import { useEditor } from "@/lib/hooks/useEditor";
 import { useTerminal } from "@/lib/hooks/useTerminal";
 import { useTerminalStore } from "@/store/terminalStore";
@@ -22,9 +23,12 @@ import { Files, Terminal, GitBranch, Radio } from "lucide-react";
 export function AppShell() {
   const [sidebarWidth, setSidebarWidth] = useState(260);
   const [terminalHeight, setTerminalHeight] = useState(250);
+  const [terminalWidth, setTerminalWidth] = useState(400);
   const [activeSidebar, setActiveSidebar] = useState<"explorer" | "scm" | "ports" | null>("explorer");
   const [showTerminal, setShowTerminal] = useState(false);
   const [terminalMaximized, setTerminalMaximized] = useState(false);
+  const [terminalPosition, setTerminalPosition] = useState<TerminalPosition>("bottom");
+  const [folderPickerOpen, setFolderPickerOpen] = useState(false);
 
   const { tabs, activeTab, activeTabId, updateContent, saveFile, setActiveTab, openFile, resolveFilePath } =
     useEditor();
@@ -37,15 +41,23 @@ export function AppShell() {
     setActiveSidebar((prev) => (prev === panel ? null : panel));
   };
 
+  const handleOpenFolder = useCallback(() => {
+    setFolderPickerOpen(true);
+  }, []);
+
   const handleCreateTerminal = useCallback(async () => {
     const id = await createTerminal(80, 24);
     if (id) setShowTerminal(true);
   }, [createTerminal]);
 
+  const handleTogglePosition = useCallback(() => {
+    setTerminalPosition((p) => (p === "bottom" ? "right" : "bottom"));
+    setTerminalMaximized(false);
+  }, []);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+` toggle terminal
       if (e.ctrlKey && e.key === "`") {
         e.preventDefault();
         if (!showTerminal && sessions.length === 0) {
@@ -54,12 +66,10 @@ export function AppShell() {
           setShowTerminal((v) => !v);
         }
       }
-      // Ctrl+B toggle sidebar
       if (e.ctrlKey && e.key === "b") {
         e.preventDefault();
         setActiveSidebar((v) => v ? null : "explorer");
       }
-      // Ctrl+Shift+G toggle source control
       if (e.ctrlKey && e.shiftKey && e.key === "G") {
         e.preventDefault();
         toggleSidebar("scm");
@@ -70,9 +80,44 @@ export function AppShell() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [showTerminal, sessions.length, handleCreateTerminal]);
 
+  const showTerminalPanel = showTerminal && sessions.length > 0;
+
+  const terminalPanel = (
+    <div
+      className={`bg-terminal flex flex-col overflow-hidden ${
+        terminalMaximized ? "flex-1" : "shrink-0"
+      }`}
+      style={
+        terminalMaximized
+          ? undefined
+          : terminalPosition === "bottom"
+          ? { height: terminalHeight }
+          : { width: terminalWidth }
+      }
+    >
+      <TerminalTabs
+        onCreateTerminal={handleCreateTerminal}
+        onToggle={() => setShowTerminal(false)}
+        isMaximized={terminalMaximized}
+        onToggleMaximize={() => setTerminalMaximized((v) => !v)}
+        position={terminalPosition}
+        onTogglePosition={handleTogglePosition}
+      />
+      <div className="flex-1 overflow-hidden">
+        {sessions.map((session) => (
+          <TerminalComponent
+            key={session.id}
+            terminalId={session.id}
+            isActive={session.id === activeSessionId}
+          />
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <div className="h-full flex flex-col">
-      <TitleBar />
+      <TitleBar onOpenFolder={handleOpenFolder} />
       <div className="flex-1 flex overflow-hidden">
         {/* Activity Bar */}
         <div className="w-12 bg-bg-secondary flex flex-col items-center pt-1 shrink-0 border-r border-border">
@@ -140,7 +185,7 @@ export function AppShell() {
               className="bg-sidebar overflow-hidden shrink-0"
               style={{ width: sidebarWidth }}
             >
-              {activeSidebar === "explorer" && <FileExplorer />}
+              {activeSidebar === "explorer" && <FileExplorer onOpenFolder={handleOpenFolder} />}
               {activeSidebar === "scm" && <SourceControl />}
               {activeSidebar === "ports" && <PortsPanel />}
             </div>
@@ -153,11 +198,13 @@ export function AppShell() {
           </>
         )}
 
-        {/* Main Area (Editor + Terminal) */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-editor">
+        {/* Main Area: Editor + Terminal (layout depends on position) */}
+        <div className={`flex-1 flex overflow-hidden ${
+          terminalPosition === "right" ? "flex-row" : "flex-col"
+        }`}>
           {/* Editor */}
           {!terminalMaximized && (
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden bg-editor">
               <EditorTabs />
               <div className="flex-1 overflow-hidden">
                 {activeTab ? (
@@ -172,51 +219,37 @@ export function AppShell() {
                     resolveFilePath={resolveFilePath}
                   />
                 ) : (
-                  <WelcomeTab />
+                  <WelcomeTab onOpenFolder={handleOpenFolder} />
                 )}
               </div>
             </div>
           )}
 
           {/* Terminal Panel */}
-          {showTerminal && sessions.length > 0 && (
+          {showTerminalPanel && (
             <>
               {!terminalMaximized && (
                 <ResizeHandle
-                  direction="vertical"
-                  onResize={(delta) =>
-                    setTerminalHeight((h) =>
-                      Math.max(100, Math.min(600, h - delta))
-                    )
-                  }
+                  direction={terminalPosition === "right" ? "horizontal" : "vertical"}
+                  onResize={(delta) => {
+                    if (terminalPosition === "right") {
+                      setTerminalWidth((w) => Math.max(200, Math.min(800, w - delta)));
+                    } else {
+                      setTerminalHeight((h) => Math.max(100, Math.min(600, h - delta)));
+                    }
+                  }}
                 />
               )}
-              <div
-                className={`bg-terminal flex flex-col overflow-hidden ${terminalMaximized ? "flex-1" : "shrink-0"}`}
-                style={terminalMaximized ? undefined : { height: terminalHeight }}
-              >
-                <TerminalTabs
-                  onCreateTerminal={handleCreateTerminal}
-                  onToggle={() => setShowTerminal(false)}
-                  isMaximized={terminalMaximized}
-                  onToggleMaximize={() => setTerminalMaximized((v) => !v)}
-                />
-                <div className="flex-1 overflow-hidden">
-                  {sessions.map((session) => (
-                    <TerminalComponent
-                      key={session.id}
-                      terminalId={session.id}
-                      isActive={session.id === activeSessionId}
-                    />
-                  ))}
-                </div>
-              </div>
+              {terminalPanel}
             </>
           )}
         </div>
       </div>
 
       <StatusBar />
+
+      {/* Folder picker */}
+      <WorkspacePicker open={folderPickerOpen} onClose={() => setFolderPickerOpen(false)} />
     </div>
   );
 }

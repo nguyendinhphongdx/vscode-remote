@@ -12,16 +12,26 @@ let subscriberCount = 0;
 
 function startWatcher(): void {
   if (watcher) return;
+  if (!config.workspaceRoot) return;
 
   watcher = watch(config.workspaceRoot, {
     ignoreInitial: true,
-    ignored: ['**/node_modules/**', '**/.git/**'],
+    ignored: [
+      '**/node_modules/**',
+      '**/.pnpm/**',
+      '**/.git/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/.next/**',
+      '**/.cache/**',
+      (filePath: string) => filePath.includes('/node_modules/') || filePath.includes('/.pnpm/'),
+    ],
     ignorePermissionErrors: true,
     awaitWriteFinish: { stabilityThreshold: 100 },
   });
 
   const emit = (event: FsWatchEvent['event'], filePath: string) => {
-    const relativePath = path.relative(config.workspaceRoot, filePath);
+    const relativePath = path.relative(config.workspaceRoot!, filePath);
     const payload: FsWatchEvent = { event, path: relativePath };
     for (const cb of callbacks) {
       cb(payload);

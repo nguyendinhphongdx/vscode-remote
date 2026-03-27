@@ -31,7 +31,7 @@ export function createTerminal(
     name: 'xterm-256color',
     cols,
     rows,
-    cwd: config.workspaceRoot,
+    cwd: config.workspaceRoot || undefined,
     env: process.env as Record<string, string>,
   });
 

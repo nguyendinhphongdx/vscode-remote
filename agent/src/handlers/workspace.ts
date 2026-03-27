@@ -18,7 +18,7 @@ export async function handleWorkspaceMessage(
       const root = config.workspaceRoot;
       sendResponse(ws, id, type, true, {
         workspaceRoot: root,
-        folderName: path.basename(root),
+        folderName: root ? path.basename(root) : null,
       });
       break;
     }

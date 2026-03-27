@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useGitStore, type GitFileInfo } from "@/store/gitStore";
 import { useGit } from "@/lib/hooks/useGit";
 import { useWebSocket } from "@/components/providers/WebSocketProvider";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   RefreshCw,
   Plus,
@@ -105,6 +106,7 @@ export function SourceControl() {
   const [stagedExpanded, setStagedExpanded] = useState(true);
   const [changesExpanded, setChangesExpanded] = useState(true);
   const [committing, setCommitting] = useState(false);
+  const [discardTarget, setDiscardTarget] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "connected") {
@@ -232,11 +234,7 @@ export function SourceControl() {
                 staged={false}
                 onStage={() => stageFile(file.path)}
                 onUnstage={() => {}}
-                onDiscard={() => {
-                  if (confirm(`Discard changes to "${file.filename}"?`)) {
-                    discardFile(file.path);
-                  }
-                }}
+                onDiscard={() => setDiscardTarget(file.path)}
               />
             ))}
           </div>
@@ -248,6 +246,18 @@ export function SourceControl() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!discardTarget}
+        title="Discard Changes"
+        message={`Are you sure you want to discard changes to "${discardTarget?.split("/").pop()}"?`}
+        confirmLabel="Discard"
+        onConfirm={() => {
+          if (discardTarget) discardFile(discardTarget);
+          setDiscardTarget(null);
+        }}
+        onCancel={() => setDiscardTarget(null)}
+      />
     </div>
   );
 }

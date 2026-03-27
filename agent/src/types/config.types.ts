@@ -18,7 +18,7 @@ export interface AgentSettings {
   relayUrl: string;
   agentSecret: string;
   localPort: number;
-  workspaceRoot: string;
+  workspaceRoot: string | null;
   maxTerminals: number;
   maxFileSize: number;
   jwtSecret: string;

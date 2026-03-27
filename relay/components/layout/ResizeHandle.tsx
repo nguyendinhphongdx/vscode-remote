@@ -9,21 +9,36 @@ interface ResizeHandleProps {
 
 export function ResizeHandle({ direction, onResize }: ResizeHandleProps) {
   const startPosRef = useRef(0);
+  const rafRef = useRef(0);
+  const accumulatedDelta = useRef(0);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
       startPosRef.current = direction === "horizontal" ? e.clientX : e.clientY;
+      accumulatedDelta.current = 0;
+
+      const flushResize = () => {
+        if (accumulatedDelta.current !== 0) {
+          onResize(accumulatedDelta.current);
+          accumulatedDelta.current = 0;
+        }
+      };
 
       const handleMouseMove = (e: MouseEvent) => {
         const currentPos =
           direction === "horizontal" ? e.clientX : e.clientY;
         const delta = currentPos - startPosRef.current;
         startPosRef.current = currentPos;
-        onResize(delta);
+        accumulatedDelta.current += delta;
+
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(flushResize);
       };
 
       const handleMouseUp = () => {
+        cancelAnimationFrame(rafRef.current);
+        flushResize();
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
         document.body.style.cursor = "";

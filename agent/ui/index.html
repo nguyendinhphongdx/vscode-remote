@@ -97,7 +97,6 @@
           <span id="statusText">Checking...</span>
         </span>
       </div>
-      <div class="workspace" id="workspace"></div>
     </div>
 
     <!-- Connect to Remote -->
@@ -129,10 +128,6 @@
           <label>Agent Secret</label>
           <input type="password" id="settingAgentSecret" class="setting-input" placeholder="Secret key" />
         </div>
-        <div class="form-group">
-          <label>Workspace Root</label>
-          <input type="text" id="settingWorkspace" class="setting-input" placeholder="/path/to/workspace" />
-        </div>
         <button class="btn-secondary" id="saveSettingsBtn" onclick="saveSettings()">Save Settings</button>
         <div class="restart-note" id="restartNote" style="display:none">Settings saved. Restart agent to apply changes.</div>
         <div class="error" id="settingsError"></div>
@@ -159,8 +154,6 @@
         document.getElementById('machineId').textContent =
           mid.slice(0,3) + '-' + mid.slice(3,6) + '-' + mid.slice(6);
         document.getElementById('password').textContent = data.password || '(fixed password set)';
-        document.getElementById('workspace').textContent = data.workspaceRoot;
-
         const dot = document.getElementById('statusDot');
         const text = document.getElementById('statusText');
         if (data.relayConnected) {
@@ -255,7 +248,6 @@
         const data = await res.json();
         document.getElementById('settingRelayUrl').value = data.relayUrl || '';
         document.getElementById('settingAgentSecret').value = data.agentSecret || '';
-        document.getElementById('settingWorkspace').value = data.workspaceRoot || '';
       } catch {
         // ignore
       }
@@ -264,7 +256,6 @@
     async function saveSettings() {
       const relayUrl = document.getElementById('settingRelayUrl').value.trim();
       const agentSecret = document.getElementById('settingAgentSecret').value.trim();
-      const workspaceRoot = document.getElementById('settingWorkspace').value.trim();
       const errorEl = document.getElementById('settingsError');
       const noteEl = document.getElementById('restartNote');
       const successEl = document.getElementById('settingsSuccess');
@@ -279,7 +270,7 @@
         const res = await fetch('/api/settings', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ relayUrl, agentSecret, workspaceRoot }),
+          body: JSON.stringify({ relayUrl, agentSecret }),
         });
         const data = await res.json();
 

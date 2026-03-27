@@ -7,7 +7,7 @@ const execFileAsync = promisify(execFile);
 
 async function git(...args: string[]): Promise<string> {
   const { stdout } = await execFileAsync('git', args, {
-    cwd: config.workspaceRoot,
+    cwd: config.workspaceRoot || undefined,
     maxBuffer: 10 * 1024 * 1024,
   });
   return stdout;
