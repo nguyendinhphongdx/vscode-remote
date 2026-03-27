@@ -1,6 +1,6 @@
 {
-  "name": "opencode-agent",
-  "version": "0.3.0",
+  "name": "opencode-remote",
+  "version": "0.3.1",
   "type": "module",
   "description": "OpenCode — access your dev environment from anywhere",
   "bin": {

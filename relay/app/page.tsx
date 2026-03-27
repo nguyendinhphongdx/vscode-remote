@@ -306,10 +306,10 @@ export default function LandingPage() {
                 <div style={{ color: "#52525b" }}># Install the agent</div>
                 <div className="flex items-center gap-2">
                   <span style={{ color: "#52525b" }}>$</span>
-                  <span style={{ color: "#4ade80" }}>npm i -g opencode-agent</span>
+                  <span style={{ color: "#4ade80" }}>npm i -g opencode-remote</span>
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText("npm i -g opencode-agent");
+                      navigator.clipboard.writeText("npm i -g opencode-remote");
                     }}
                     className="ml-auto p-1 rounded opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity"
                     style={{ color: "#52525b" }}
