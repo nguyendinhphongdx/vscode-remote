@@ -15,11 +15,11 @@ export interface PersistedConfig {
 }
 
 export interface AgentSettings {
-  port: number;
+  relayUrl: string;
+  agentSecret: string;
+  localPort: number;
   workspaceRoot: string;
-  maxConnections: number;
   maxTerminals: number;
   maxFileSize: number;
-  allowedOrigins: string[];
   jwtSecret: string;
 }

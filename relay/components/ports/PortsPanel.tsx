@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import { usePorts } from "@/lib/hooks/usePorts";
 import { usePortStore } from "@/store/portStore";
 import { useWebSocket } from "@/components/providers/WebSocketProvider";
+import { useAuth } from "@/components/providers/AuthProvider";
 import {
   RefreshCw,
   Globe,
   GlobeLock,
-  ExternalLink,
+
   Play,
   Square,
   Copy,
@@ -63,12 +64,14 @@ export function PortsPanel() {
     }
   };
 
+  const { machineId } = useAuth();
+
   const handleOpenTunnel = (port: number) => {
     const url = tunnelUrls.get(port);
     if (url) {
       window.open(url, "_blank");
     } else {
-      window.open(`/port/${port}/`, "_blank");
+      window.open(`/port/${machineId}/${port}/`, "_blank");
     }
   };
 

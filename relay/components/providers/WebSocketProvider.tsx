@@ -24,6 +24,7 @@ const WSContext = createContext<WSContextValue>({
 let wsClient: WebSocketClient | null = null;
 let wsUnsubscribe: (() => void) | null = null;
 let wsToken: string | null = null;
+let wsMachineId: string | null = null;
 
 let wsStore: { ws: WebSocketClient | null; status: ConnectionStatus } = {
   ws: null,
@@ -46,16 +47,16 @@ function getWsSnapshot() {
 
 const serverSnapshot: typeof wsStore = { ws: null, status: "disconnected" };
 
-function connectWs(token: string) {
-  // Already connected with same token
-  if (wsClient && wsToken === token) return;
+function connectWs(token: string, machineId: string) {
+  // Already connected with same token + machineId
+  if (wsClient && wsToken === token && wsMachineId === machineId) return;
 
   // Disconnect old
   disconnectWs();
 
   const protocol = typeof window !== "undefined" && window.location.protocol === "https:" ? "wss:" : "ws:";
   const host = typeof window !== "undefined" ? window.location.host : "localhost:9001";
-  const wsUrl = `${protocol}//${host}/api/ws`;
+  const wsUrl = `${protocol}//${host}/api/ws?machineId=${machineId}`;
 
   const client = new WebSocketClient(wsUrl, token);
   wsUnsubscribe = client.onStatusChange((s) => {
@@ -66,6 +67,7 @@ function connectWs(token: string) {
   client.connect();
   wsClient = client;
   wsToken = token;
+  wsMachineId = machineId;
   wsStore = { ws: client, status: "connecting" };
   notify();
 }
@@ -80,23 +82,22 @@ function disconnectWs() {
     wsClient = null;
   }
   wsToken = null;
+  wsMachineId = null;
   wsStore = { ws: null, status: "disconnected" };
   notify();
 }
 
 export function WebSocketProvider({ children }: { children: ReactNode }) {
-  const { token } = useAuth();
+  const { token, machineId } = useAuth();
   const store = useSyncExternalStore(subscribeWs, getWsSnapshot, () => serverSnapshot);
 
   useEffect(() => {
-    if (token) {
-      connectWs(token);
+    if (token && machineId) {
+      connectWs(token, machineId);
     } else {
       disconnectWs();
     }
-    // Don't disconnect on cleanup - connection persists across Strict Mode remounts
-    // Disconnect only when token changes to null (logout)
-  }, [token]);
+  }, [token, machineId]);
 
   return (
     <WSContext.Provider value={store}>

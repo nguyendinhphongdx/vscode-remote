@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 
 function formatMachineId(value: string): string {
@@ -18,21 +19,29 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const handleMachineIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setMachineId(formatMachineId(e.target.value));
-  };
+  // Auto-fill from query params (when coming from agent UI)
+  useEffect(() => {
+    const mid = searchParams.get("machineId");
+    if (mid) setMachineId(formatMachineId(mid));
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleLogin = async (mid?: string, pwd?: string) => {
+    const rawMid = (mid || machineId).replace(/-/g, "");
+    const rawPwd = pwd || password;
+
     setError("");
     setLoading(true);
 
     try {
-      const res = await fetch("/api/agent/auth/login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ machineId, password }),
+        body: JSON.stringify({ machineId: rawMid, password: rawPwd }),
       });
 
       if (!res.ok) {
@@ -41,12 +50,17 @@ export default function LoginPage() {
       }
 
       const { token } = await res.json();
-      login(token);
+      login(token, rawMid);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    handleLogin();
   };
 
   return (
@@ -75,7 +89,7 @@ export default function LoginPage() {
             <input
               type="text"
               value={machineId}
-              onChange={handleMachineIdChange}
+              onChange={(e) => setMachineId(formatMachineId(e.target.value))}
               placeholder="000-000-000"
               className="w-full px-3 py-2 bg-bg-input border border-border rounded text-text-primary focus:outline-none focus:border-accent font-mono text-lg tracking-wider text-center"
               required

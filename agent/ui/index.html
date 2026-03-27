@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VS Code Remote</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1e1e1e; color: #cccccc;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 100vh;
+    }
+    .container { width: 420px; }
+    .card {
+      background: #252526; border: 1px solid #3c3c3c; border-radius: 8px;
+      padding: 24px; margin-bottom: 16px;
+    }
+    .card h2 { font-size: 14px; color: #999; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+    .info-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid #333;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: #999; font-size: 13px; }
+    .info-value { font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 15px; letter-spacing: 2px; }
+    .info-value.id { color: #4fc1ff; font-size: 18px; font-weight: 600; }
+    .info-value.password { color: #ce9178; }
+    .status {
+      display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+    }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+    .status-dot.online { background: #73c991; }
+    .status-dot.offline { background: #c74e39; }
+    .status-dot.connecting { background: #e2c08d; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 12px; color: #999; margin-bottom: 4px; }
+    .form-group input {
+      width: 100%; padding: 8px 12px; background: #3c3c3c; border: 1px solid #555;
+      border-radius: 4px; color: #ccc; font-size: 14px; outline: none;
+      font-family: 'Cascadia Code', 'Fira Code', monospace; letter-spacing: 1px;
+    }
+    .form-group input:focus { border-color: #007acc; }
+    .form-group input::placeholder { color: #666; letter-spacing: 0; font-family: inherit; }
+    .btn {
+      width: 100%; padding: 10px; background: #0e639c; border: none; border-radius: 4px;
+      color: white; font-size: 14px; font-weight: 500; cursor: pointer;
+    }
+    .btn:hover { background: #1177bb; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .error { color: #f44747; font-size: 12px; margin-top: 8px; }
+    .workspace { font-size: 11px; color: #666; margin-top: 4px; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- This Device -->
+    <div class="card">
+      <h2>This Device</h2>
+      <div class="info-row">
+        <span class="info-label">Machine ID</span>
+        <span class="info-value id" id="machineId">---</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Password</span>
+        <span class="info-value password" id="password">---</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Relay</span>
+        <span class="status">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">Checking...</span>
+        </span>
+      </div>
+      <div class="workspace" id="workspace"></div>
+    </div>
+
+    <!-- Connect to Remote -->
+    <div class="card">
+      <h2>Connect to Remote</h2>
+      <div class="form-group">
+        <label>Remote Machine ID</label>
+        <input type="text" id="remoteId" placeholder="000-000-000" maxlength="11" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="remotePassword" placeholder="Enter password" />
+      </div>
+      <button class="btn" id="connectBtn" onclick="connectRemote()">Connect</button>
+      <div class="error" id="error"></div>
+    </div>
+  </div>
+
+  <script>
+    // Format machine ID as 000-000-000
+    document.getElementById('remoteId').addEventListener('input', function(e) {
+      let val = e.target.value.replace(/[^0-9]/g, '').slice(0, 9);
+      if (val.length > 6) val = val.slice(0,3) + '-' + val.slice(3,6) + '-' + val.slice(6);
+      else if (val.length > 3) val = val.slice(0,3) + '-' + val.slice(3);
+      e.target.value = val;
+    });
+
+    async function fetchStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+
+        const mid = data.machineId;
+        document.getElementById('machineId').textContent =
+          mid.slice(0,3) + '-' + mid.slice(3,6) + '-' + mid.slice(6);
+        document.getElementById('password').textContent = data.password || '(fixed password set)';
+        document.getElementById('workspace').textContent = data.workspaceRoot;
+
+        const dot = document.getElementById('statusDot');
+        const text = document.getElementById('statusText');
+        if (data.relayConnected) {
+          dot.className = 'status-dot online';
+          text.textContent = 'Connected';
+        } else {
+          dot.className = 'status-dot connecting';
+          text.textContent = 'Connecting...';
+        }
+      } catch {
+        document.getElementById('statusDot').className = 'status-dot offline';
+        document.getElementById('statusText').textContent = 'Error';
+      }
+    }
+
+    async function connectRemote() {
+      const machineId = document.getElementById('remoteId').value.replace(/-/g, '');
+      const password = document.getElementById('remotePassword').value;
+      const errorEl = document.getElementById('error');
+      errorEl.textContent = '';
+
+      if (machineId.length !== 9) {
+        errorEl.textContent = 'Please enter a valid 9-digit Machine ID';
+        return;
+      }
+      if (!password) {
+        errorEl.textContent = 'Please enter the password';
+        return;
+      }
+
+      const btn = document.getElementById('connectBtn');
+      btn.disabled = true;
+      btn.textContent = 'Connecting...';
+
+      try {
+        // Get relay server URL
+        const connectRes = await fetch('/api/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ machineId }),
+        });
+        const connectData = await connectRes.json();
+        if (!connectData.editorUrl) {
+          errorEl.textContent = connectData.error || 'Failed to connect';
+          return;
+        }
+
+        // Login via relay to get token (not password on URL)
+        const relayBase = connectData.editorUrl.replace(/\/editor\/.*$/, '');
+        const loginRes = await fetch(`${relayBase}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ machineId, password }),
+        });
+
+        if (!loginRes.ok) {
+          const loginData = await loginRes.json();
+          errorEl.textContent = loginData.error || 'Authentication failed';
+          return;
+        }
+
+        const { token } = await loginRes.json();
+        // Pass only token via URL (short-lived JWT, not password)
+        const url = new URL(connectData.editorUrl);
+        url.searchParams.set('token', token);
+        window.open(url.toString(), '_blank');
+      } catch (err) {
+        errorEl.textContent = 'Connection failed';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Connect';
+      }
+    }
+
+    // Enter key to connect
+    document.getElementById('remotePassword').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') connectRemote();
+    });
+
+    // Poll status
+    fetchStatus();
+    setInterval(fetchStatus, 3000);
+  </script>
+</body>
+</html>

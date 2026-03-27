@@ -30,7 +30,8 @@ export class WebSocketClient {
     this.shouldReconnect = true;
     this.notifyStatus("connecting");
 
-    const wsUrl = `${this.url}?token=${encodeURIComponent(this.token)}`;
+    const separator = this.url.includes("?") ? "&" : "?";
+    const wsUrl = `${this.url}${separator}token=${encodeURIComponent(this.token)}`;
     console.log("[ws] Connecting to:", wsUrl.substring(0, 50) + "...");
     this.ws = new WebSocket(wsUrl);
 

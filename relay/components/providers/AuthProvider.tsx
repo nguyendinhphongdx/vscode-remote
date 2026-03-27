@@ -9,12 +9,16 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-import { getToken, setToken, clearToken, isTokenExpired } from "@/lib/auth/auth";
+import {
+  getToken, setToken, clearToken, isTokenExpired,
+  getMachineId, setMachineId as storeMachineId, clearMachineId,
+} from "@/lib/auth/auth";
 
 interface AuthContextValue {
   token: string | null;
+  machineId: string | null;
   isAuthenticated: boolean;
-  login: (token: string) => void;
+  login: (token: string, machineId: string) => void;
   logout: () => void;
 }
 
@@ -22,30 +26,37 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setTokenState] = useState<string | null>(null);
+  const [machineId, setMachineIdState] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const stored = getToken();
-    if (stored && !isTokenExpired(stored)) {
+    const storedMid = getMachineId();
+    if (stored && !isTokenExpired(stored) && storedMid) {
       setTokenState(stored);
+      setMachineIdState(storedMid);
     }
     setChecked(true);
   }, []);
 
   const login = useCallback(
-    (newToken: string) => {
+    (newToken: string, newMachineId: string) => {
       setToken(newToken);
+      storeMachineId(newMachineId);
       setTokenState(newToken);
-      router.replace("/editor");
+      setMachineIdState(newMachineId);
+      router.replace(`/editor/${newMachineId}`);
     },
     [router]
   );
 
   const logout = useCallback(() => {
     clearToken();
+    clearMachineId();
     setTokenState(null);
-    router.replace("/login");
+    setMachineIdState(null);
+    router.replace("/");
   }, [router]);
 
   if (!checked) return null;
@@ -54,7 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         token,
-        isAuthenticated: !!token,
+        machineId,
+        isAuthenticated: !!token && !!machineId,
         login,
         logout,
       }}

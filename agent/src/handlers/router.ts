@@ -7,6 +7,9 @@ import { handleTerminalMessage } from './terminal.js';
 import { handleGitMessage } from './git.js';
 import { handlePortMessage } from './port.js';
 import { handleWorkspaceMessage } from './workspace.js';
+import { handleAuthMessage } from './auth.js';
+import { handlePortProxy } from './portProxy.js';
+import { MSG } from '../protocol.js';
 
 export function sendResponse(
   ws: WebSocket,
@@ -41,7 +44,11 @@ export async function routeMessage(ws: WebSocket, raw: string): Promise<void> {
   const { id, type, payload } = msg;
 
   try {
-    if (type.startsWith('fs:')) {
+    if (type.startsWith('auth:')) {
+      await handleAuthMessage(ws, id, type, payload);
+    } else if (type === MSG.PORT_PROXY) {
+      await handlePortProxy(ws, id, type, payload);
+    } else if (type.startsWith('fs:')) {
       await handleFsMessage(ws, id, type, payload);
     } else if (type.startsWith('terminal:')) {
       await handleTerminalMessage(ws, id, type, payload);

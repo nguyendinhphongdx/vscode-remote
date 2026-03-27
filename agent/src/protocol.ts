@@ -202,11 +202,48 @@ export interface AuthLoginResponse {
   expiresAt: number;
 }
 
+// ============ Relay Types ============
+
+export interface AgentRegisterPayload {
+  machineId: string;
+  secret: string;
+}
+
+export interface AgentRegisteredPayload {
+  ok: boolean;
+}
+
+// ============ Port Proxy Types (HTTP-over-WS) ============
+
+export interface PortProxyPayload {
+  requestId: string;
+  port: number;
+  method: string;
+  path: string;
+  headers: Record<string, string>;
+  body?: string; // base64 encoded
+}
+
+export interface PortProxyResponse {
+  requestId: string;
+  statusCode: number;
+  headers: Record<string, string>;
+  body: string; // base64 encoded
+}
+
 // ============ Message Type Constants ============
 
 export const MSG = {
   // Auth
   AUTH_LOGIN: 'auth:login',
+
+  // Relay
+  AGENT_REGISTER: 'agent:register',
+  AGENT_REGISTERED: 'agent:registered',
+
+  // Port Proxy (HTTP-over-WS)
+  PORT_PROXY: 'port:proxy',
+  PORT_PROXY_RESPONSE: 'port:proxy:response',
 
   // File System
   FS_LIST: 'fs:list',
