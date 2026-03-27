@@ -38,6 +38,7 @@ const commands: Record<string, CommandInfo> = {
   install:   { description: 'Register as system service (auto-start)', handler: cmdInstall },
   uninstall: { description: 'Remove system service',              handler: cmdUninstall },
   run:       { description: 'Run agent in foreground',            handler: cmdRun },
+  purge:     { description: 'Completely remove agent from this machine', handler: cmdPurge },
   help:      { description: 'Show this help message',             handler: cmdHelp },
 };
 
@@ -348,6 +349,56 @@ function cmdUninstall() {
   }
 }
 
+function cmdPurge() {
+  console.log('');
+  console.log('  ⚠ This will completely remove OpenCode Agent from this machine:');
+  console.log('    - Stop the running agent');
+  console.log('    - Remove system service (if installed)');
+  console.log(`    - Delete data directory: ${DATA_DIR}`);
+  console.log('    - Uninstall the npm package globally');
+  console.log('');
+
+  // Simple confirmation via --yes flag or interactive
+  if (!args.includes('--yes') && !args.includes('-y')) {
+    console.log('  Run with --yes to confirm:');
+    console.log('    opencode purge --yes');
+    console.log('');
+    return;
+  }
+
+  // 1. Stop agent
+  console.log('Stopping agent...');
+  const pid = readPid();
+  if (pid && isRunning()) {
+    try { process.kill(pid, 'SIGTERM'); } catch { /* ignore */ }
+  }
+  cleanPid();
+
+  // 2. Uninstall system service
+  console.log('Removing system service...');
+  cmdUninstall();
+
+  // 3. Delete data directory
+  console.log(`Deleting ${DATA_DIR}...`);
+  try {
+    fs.rmSync(DATA_DIR, { recursive: true, force: true });
+    console.log('Data directory removed.');
+  } catch (err) {
+    console.error('Could not delete data directory:', (err as Error).message);
+  }
+
+  // 4. Uninstall npm package
+  console.log('Uninstalling opencode-remote globally...');
+  try {
+    execSync('npm uninstall -g opencode-remote', { stdio: 'inherit' });
+  } catch {
+    console.log('Could not uninstall package (may not be installed globally).');
+  }
+
+  console.log('');
+  console.log('OpenCode Agent has been completely removed from this machine.');
+}
+
 function cmdHelp() {
   console.log('');
   console.log('  OpenCode Agent');
@@ -366,6 +417,7 @@ function cmdHelp() {
   console.log('    opencode id             Show Machine ID');
   console.log('    opencode logs -f        Follow log output');
   console.log('    opencode run            Run in foreground (debug)');
+  console.log('    opencode purge --yes    Remove agent completely');
   console.log('');
 }
 
