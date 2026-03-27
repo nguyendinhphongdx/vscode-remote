@@ -2,20 +2,51 @@
 
 Technical documentation for contributors working on VS Code Remote.
 
+## Monorepo Structure
+
+```
+vscode-remote/                  npm workspaces monorepo
+├── shared/                     @vscode-remote/shared — protocol types & MSG constants
+├── agent/                      opencode-remote — npm package, runs on host machine
+├── relay/                      Next.js + Express relay server
+├── package.json                Root workspace config
+├── .env                        Shared env vars (git-ignored)
+└── .env.example                Template for env vars
+```
+
+### Shared Package (`@vscode-remote/shared`)
+
+Single source of truth for all protocol types and MSG constants. Both agent and relay import from here.
+
+```bash
+npm run build:shared            # Build with tsc (must run before agent/relay)
+```
+
+### Agent Build (tsup)
+
+Agent uses **tsup** to bundle for npm publish. `@vscode-remote/shared` is inlined into the bundle so the published package has no workspace dependency.
+
+Build-time env injection via `tsup.config.ts`:
+- `RELAY_URL` from `.env` → baked as `__BUILD_RELAY_URL__` fallback
+
+```bash
+npm run build:agent             # tsup build
+npm run publish:agent           # Build shared + publish agent to npm
+```
+
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                          Relay Server                               │
 │  ┌──────────────┐  ┌──────────────────────────────────────────────┐ │
-│  │  Next.js App │  │  Custom server.ts                           │ │
+│  │  Next.js App │  │  Express + Custom server.ts                  │ │
 │  │  (UI pages)  │  │  ├── WS hub (agent ↔ browser routing)      │ │
-│  │              │  │  ├── HTTP: /api/auth/login, /api/agents     │ │
-│  │  /           │  │  ├── Admin auth (HMAC cookie)               │ │
-│  │  /login      │  │  └── Token verification (forward to agent)  │ │
-│  │  /editor/:id │  │                                              │ │
-│  │  /dashboard  │  └──────────────────────────────────────────────┘ │
-│  └──────────────┘                                                   │
+│  │              │  │  ├── /api/auth/* (rate limited)              │ │
+│  │  /           │  │  ├── /api/admin/* (timing-safe auth)        │ │
+│  │  /editor/:id │  │  ├── /api/agents (admin protected)          │ │
+│  │  /dashboard  │  │  └── First-message WS auth (no token in URL)│ │
+│  └──────────────┘  └──────────────────────────────────────────────┘ │
 └────────────────────────────────┬────────────────────────────────────┘
                                  │ WebSocket
                                  │ (agent connects outbound)
@@ -26,10 +57,10 @@ Technical documentation for contributors working on VS Code Remote.
 │  │ fs       │  │ file     │  │ (outbound WS)  │  │ (localhost    │ │
 │  │ terminal │  │ pty      │  │                │  │  admin UI)    │ │
 │  │ git      │  │ git      │  │ Registers with │  │               │ │
-│  │ port     │  │ port     │  │ relay, routes  │  │ /api/admin/*  │ │
-│  │ workspace│  │ tunnel   │  │ messages       │  │               │ │
-│  │ auth     │  │ watcher  │  └───────────────┘  └───────────────┘ │
-│  └──────────┘  │ config   │                                        │
+│  │ port     │  │ port     │  │ relay, routes  │  │ /api/status   │ │
+│  │ workspace│  │ tunnel   │  │ messages       │  │ /api/settings │ │
+│  │ auth     │  │ watcher  │  └───────────────┘  │ /api/password  │ │
+│  └──────────┘  │ config   │                      └───────────────┘ │
 │                │ password  │                                        │
 │                │ machineId │                                        │
 │                └──────────┘                                        │
@@ -43,13 +74,13 @@ Technical documentation for contributors working on VS Code Remote.
 1. Agent starts → connects outbound WS to relay (`/api/agent-ws`)
 2. Agent sends `agent:register` with `machineId` + `RELAY_SECRET`
 3. Relay stores agent WS in `agents` Map
-4. Browser opens `/editor/:machineId` → relay upgrades to WS (`/api/browser-ws/:machineId`)
-5. Relay verifies browser token via `auth:verify` forwarded to agent
-6. Relay sends `browser:connected` to agent (starts file watcher)
+4. Browser opens `/editor/:machineId` → relay upgrades to WS (`/api/ws?machineId=xxx`)
+5. Browser sends first message: `auth:authenticate` with JWT token
+6. Relay forwards `auth:verify` to agent, marks browser as authenticated
 7. All browser messages are forwarded to agent via relay, responses routed back
 8. On browser disconnect → `browser:disconnected` → agent stops watcher if no browsers left
 
-### Message Routing (relay server.ts)
+### Message Routing (relay server/)
 
 ```
 Browser WS message → relay checks `agents.get(machineId)` → forwards to agent WS
@@ -69,146 +100,186 @@ Browser                   Relay                      Agent
   │                         │                          │
   │  (store in sessionStorage)                         │
   │                         │                          │
-  ├─WS upgrade──────────────►│                          │
-  │  ?token=xxx&machineId   ├─WS auth:verify──────────►│
+  ├─WS upgrade─────────────►│                          │
+  │  ?machineId=xxx         │ (pending auth, 10s timeout)
+  │                         │                          │
+  ├─WS auth:authenticate───►│                          │
+  │  {token}                ├─WS auth:verify──────────►│
   │                         │◄──────────{success}──────┤
   │◄─────WS connected───────┤                          │
 ```
+
+**Key change**: Token is sent via first WebSocket message, never in URL query params.
 
 ### Token Expiry
 
 - JWT has 24h lifetime, `expiresAt` stored in sessionStorage
 - Editor page sets `setTimeout(redirect, timeLeft)` on mount/reload
-- On expiry → clear session → redirect to `/login?expired=1`
-- Login page shows "Session expired" message
+- On expiry → clear session → redirect to login
+- WS client detects `auth_expired` → stops reconnecting
+
+## Environment Variables
+
+All in root `.env` (shared by agent and relay via monorepo):
+
+| Variable | Used by | Description |
+|----------|---------|-------------|
+| `RELAY_SECRET` | Agent + Relay | Shared secret for agent↔relay auth (must match) |
+| `RELAY_URL` | Agent | WebSocket URL of relay (build-time bake + runtime override) |
+| `WORKSPACE_ROOT` | Agent | Default workspace path |
+| `LOCAL_PORT` | Agent | Admin UI port (default: 9000) |
+| `ADMIN_PASSWORD` | Relay | Admin dashboard password (blocked if not set) |
+| `ALLOWED_ORIGINS` | Relay | CORS whitelist, comma-separated (dev: allow all) |
+| `PORT` | Relay | Relay server port (default: 9001) |
+| `NODE_ENV` | Relay | `production` or `development` |
 
 ## Project Structure
+
+### Shared (`shared/`)
+
+```
+src/
+├── index.ts                    Re-export all from protocol
+└── protocol.ts                 All WS message types, interfaces, MSG constants
+```
 
 ### Agent (`agent/`)
 
 ```
 src/
-├── index.ts                  Entry point (start local server + relay client)
-├── cli.ts                    CLI commands (start, stop, status, password, etc.)
-├── config.ts                 Config proxy (re-exports from configStore)
-├── constants.ts              Default values (ports, limits, relay URL)
-├── protocol.ts               All WS message types + MSG constants
+├── index.ts                    Entry point (start local server + relay client)
+├── cli.ts                      CLI commands (start, stop, status, password, install, etc.)
+├── config.ts                   dotenv loader + config proxy (re-exports configStore)
+├── constants.ts                (minimal — most config via env vars now)
 │
 ├── auth/
-│   └── jwt.ts                signToken(), verifyToken() — 24h expiry
+│   └── jwt.ts                  signToken(), verifyToken() — 24h expiry
 │
 ├── handlers/
-│   ├── router.ts             routeMessage() — dispatch by type prefix
-│   ├── auth.ts               auth:login, auth:verify
-│   ├── fileSystem.ts         fs:* handlers
-│   ├── terminal.ts           terminal:* handlers
-│   ├── git.ts                git:* handlers
-│   ├── port.ts               port:* handlers
-│   └── workspace.ts          workspace:* handlers
+│   ├── router.ts               routeMessage() — dispatch by type prefix
+│   ├── auth.ts                 auth:login, auth:verify
+│   ├── fileSystem.ts           fs:* handlers
+│   ├── terminal.ts             terminal:shells, terminal:* handlers
+│   ├── git.ts                  git:* handlers
+│   ├── port.ts                 port:* handlers
+│   └── workspace.ts            workspace:* handlers
 │
 ├── services/
-│   ├── configStore.ts        JSON config persistence (~/.opencode/config.json)
-│   ├── fileService.ts        readFile, writeFile, listDir, stat, delete, rename
-│   ├── ptyService.ts         node-pty sessions (create, input, resize, close)
-│   ├── gitService.ts         Git CLI wrapper (status, stage, commit, diff)
-│   ├── portService.ts        Port scanning (ss/lsof/netstat per platform)
-│   ├── tunnelService.ts      Cloudflare Tunnel (auto-install cloudflared)
-│   ├── watcherService.ts     chokidar with subscriber counting (lazy start/stop)
-│   ├── passwordService.ts    bcrypt hash + verify
-│   └── machineId.ts          9-digit random ID generator
+│   ├── configStore.ts          JSON config persistence (~/.opencode/config.json, chmod 600)
+│   ├── fileService.ts          readFile, writeFile, listDir, stat, delete, rename
+│   ├── ptyService.ts           node-pty sessions + shell detection (Win/Unix)
+│   ├── gitService.ts           Git CLI wrapper (status, stage, commit, diff)
+│   ├── portService.ts          Port scanning (ss/lsof/netstat per platform)
+│   ├── tunnelService.ts        Cloudflare Tunnel (auto-install cloudflared)
+│   ├── watcherService.ts       chokidar with subscriber counting (lazy start/stop)
+│   ├── passwordService.ts      bcrypt hash + verify
+│   └── machineId.ts            9-digit random ID generator
 │
 ├── relay/
-│   └── relayClient.ts        Outbound WS to relay, auto-reconnect, message routing
+│   └── relayClient.ts          Outbound WS to relay, auto-reconnect, message routing
 │
 ├── server/
-│   └── local.ts              Express server for agent admin UI
+│   └── local.ts                Express server for agent admin UI + API
 │
 ├── types/
-│   └── config.types.ts       TypeScript interfaces for config
+│   └── config.types.ts         TypeScript interfaces for config
 │
 └── utils/
-    ├── pathSecurity.ts       resolveSafePath() — prevents path traversal
-    └── logger.ts             Structured logger with levels
+    ├── pathSecurity.ts          resolveSafePath() — prevents path traversal
+    └── logger.ts                Structured logger with levels
+
+tsup.config.ts                  Build config — inlines shared, bakes RELAY_URL
 ```
 
 ### Relay (`relay/`)
 
 ```
 app/
-├── page.tsx                  Landing page (hero + connect form)
-├── layout.tsx                Root layout (fonts, SEO metadata, PWA)
-├── globals.css               Theme variables (VS Code dark colors)
-├── manifest.ts               PWA manifest
-├── login/page.tsx            Login form (Machine ID + Password)
+├── page.tsx                    Landing page (hero + connect form)
+├── layout.tsx                  Root layout (fonts, SEO metadata, PWA)
+├── globals.css                 Theme variables (VS Code dark colors)
+├── manifest.ts                 PWA manifest
 ├── editor/
-│   ├── layout.tsx            AuthProvider + WebSocketProvider wrapper
-│   └── [machineId]/page.tsx  Editor page (token check, auto-logout timer)
-└── dashboard/page.tsx        Admin dashboard (agents list, recent connections)
+│   ├── layout.tsx              AuthProvider + WebSocketProvider wrapper
+│   └── [machineId]/page.tsx    Editor page (token check, auto-logout timer)
+└── dashboard/page.tsx          Admin dashboard (admin login, agents list, recent)
 
 components/
 ├── layout/
-│   ├── AppShell.tsx          Main 3-panel layout (sidebar, editor, terminal)
-│   ├── TitleBar.tsx          Menu bar, workspace name, window controls
-│   ├── StatusBar.tsx         Git branch, connection status, logout
-│   ├── ResizeHandle.tsx      Draggable resize with RAF throttling
-│   └── WorkspacePicker.tsx   Directory browser (supports / and \ paths)
+│   ├── AppShell.tsx            Main 3-panel layout (sidebar, editor, terminal)
+│   ├── TitleBar.tsx            Menu bar, workspace name, sign out
+│   ├── StatusBar.tsx           Git branch, connection status, logout
+│   ├── ResizeHandle.tsx        Draggable resize with RAF throttling
+│   └── WorkspacePicker.tsx     Directory browser (supports / and \ paths)
 ├── editor/
-│   ├── MonacoEditor.tsx      Monaco wrapper with Ctrl+S, Ctrl+Click
-│   ├── EditorTabs.tsx        Tab bar (preview italic, dirty indicator)
-│   └── WelcomeTab.tsx        Empty state with Open Folder button
+│   ├── MonacoEditor.tsx        Monaco wrapper with Ctrl+S, Ctrl+Click
+│   ├── EditorTabs.tsx          Tab bar (preview italic, dirty indicator)
+│   └── WelcomeTab.tsx          Empty state with Open Folder button
 ├── file-explorer/
-│   ├── FileExplorer.tsx      Tree root with loading state
-│   ├── FileTreeNode.tsx      Recursive node with git badges
-│   ├── FileContextMenu.tsx   Right-click actions
-│   └── NewFileDialog.tsx     Inline create file/folder input
+│   ├── FileExplorer.tsx        Tree root with loading state
+│   ├── FileTreeNode.tsx        Recursive node with git badges
+│   ├── FileContextMenu.tsx     Right-click actions
+│   └── NewFileDialog.tsx       Inline create file/folder input
 ├── terminal/
-│   ├── Terminal.tsx           xterm.js instance
-│   └── TerminalTabs.tsx       Session tabs + position toggle (bottom/right)
+│   ├── Terminal.tsx            xterm.js instance
+│   ├── TerminalTabs.tsx        Session tabs + shell dropdown + position toggle
+│   └── VoiceMicButton.tsx      Press-and-hold voice input (Web Speech API)
 ├── source-control/
-│   └── SourceControl.tsx     Git panel (staged, changes, commit)
+│   └── SourceControl.tsx       Git panel (staged, changes, commit)
 ├── ports/
-│   ├── PortsPanel.tsx        Port list with forward/preview/copy actions
-│   └── PortPreview.tsx       Iframe split panel with URL bar
+│   ├── PortsPanel.tsx          Port list with forward/preview/copy actions
+│   └── PortPreview.tsx         Iframe split panel with URL bar
 ├── ui/
-│   └── ConfirmDialog.tsx     Custom confirm dialog (replaces native)
+│   └── ConfirmDialog.tsx       Custom confirm dialog (replaces native)
 └── providers/
-    ├── AuthProvider.tsx       Auth context (login, logout, token state)
-    └── WebSocketProvider.tsx  WS connection + auto-reconnect
+    ├── AuthProvider.tsx         Auth context (login, logout, token state)
+    └── WebSocketProvider.tsx    WS connection + auto-reconnect
 
 lib/
 ├── ws/
-│   ├── client.ts             WebSocketClient class (reconnect, send/receive)
-│   └── protocol.ts           Message types mirror of agent protocol
+│   └── client.ts               WebSocketClient class (first-message auth, reconnect)
 ├── hooks/
-│   ├── useFileSystem.ts      listDirectory, readFile, writeFile, etc.
-│   ├── useEditor.ts          openFile, saveFile, closeTab, resolveFilePath
-│   ├── useTerminal.ts        createTerminal, sendInput, resize, close
-│   ├── useGit.ts             refreshStatus, stageFile, commitChanges, getDiff
-│   └── usePorts.ts           refreshPorts, forwardPort, unforwardPort
+│   ├── useFileSystem.ts        listDirectory, readFile, writeFile, etc.
+│   ├── useEditor.ts            openFile, saveFile, closeTab, auto-reload on external change
+│   ├── useTerminal.ts          fetchShells, createTerminal, sendInput, resize, close
+│   ├── useGit.ts               refreshStatus, stageFile, commitChanges, getDiff
+│   └── usePorts.ts             refreshPorts, forwardPort, unforwardPort
 ├── auth/
-│   └── auth.ts               get/set/clear token + machineId (sessionStorage)
+│   └── auth.ts                 get/set/clear token + machineId (sessionStorage)
 └── utils/
-    ├── language.ts            File extension → Monaco language ID
-    └── fileIcons.tsx          File icon resolver (Material Icon Theme)
+    ├── language.ts              File extension → Monaco language ID
+    └── fileIcons.tsx            File icon resolver (Material Icon Theme)
 
-store/                         Zustand stores
-├── editorStore.ts             Tabs (open, close, preview, pin, dirty state)
-├── fileStore.ts               File tree children Map, active file
-├── gitStore.ts                Branch, entries, change count
-├── terminalStore.ts           Sessions array, active session
-├── workspaceStore.ts          workspaceRoot, folderName (nullable)
-└── portStore.ts               ports[], forwardedPorts Set, tunnelUrls Map
+server/                          Decomposed relay server modules
+├── state.ts                    Shared state (agents, browsers, pending Maps)
+├── adminAuth.ts                Admin auth factory (signToken, verifyToken, middleware)
+├── agentHandler.ts             handleAgentConnection(ws, relaySecret)
+├── browserHandler.ts           handleBrowserConnection — first-message auth flow
+├── agentBridge.ts              forwardLoginToAgent, verifyTokenViaAgent
+├── routes/
+│   ├── admin.ts                Express Router: /api/admin/* (rate limited, timing-safe)
+│   ├── auth.ts                 Express Router: /api/auth/* (rate limited)
+│   └── agents.ts               Express Router: /api/agents (admin protected)
+└── upgrade.ts                  WebSocket upgrade handler
 
-server.ts                      Custom HTTP + WS server
-                               - WS hub: routes browser ↔ agent messages
-                               - HTTP: /api/auth/login, /api/agents, /api/admin/*
-                               - Admin auth: HMAC-signed token in HttpOnly cookie
-                               - Token verification: forwards auth:verify to agent
+store/                           Zustand stores
+├── editorStore.ts              Tabs (open, close, preview, pin, dirty, externalUpdate)
+├── fileStore.ts                File tree children Map, active file
+├── gitStore.ts                 Branch, entries, change count
+├── terminalStore.ts            Sessions array, active session
+├── workspaceStore.ts           workspaceRoot, folderName (nullable)
+└── portStore.ts                ports[], forwardedPorts Set, tunnelUrls Map
+
+server.ts                        Entry point (~90 lines)
+                                 - Express app with CORS, logging middleware
+                                 - Mounts route routers
+                                 - Falls back to Next.js handler
+                                 - HTTP server + WSS noServer
 ```
 
 ## WebSocket Protocol
 
-All messages use a JSON envelope:
+All messages use a JSON envelope from `@vscode-remote/shared`:
 
 ```typescript
 // Request (Browser → Agent, via Relay)
@@ -227,6 +298,7 @@ All messages use a JSON envelope:
 |----------|------|-----------|---------|
 | **Auth** | `auth:login` | B→A | `{machineId, password}` → `{token, expiresAt}` |
 | | `auth:verify` | R→A | `{token}` → `{machineId}` |
+| | `auth:authenticate` | B→R | `{token}` (first WS message) |
 | **FS** | `fs:list` | B→A | `{path}` → `{entries[]}` |
 | | `fs:read` | B→A | `{path}` → `{path, content}` |
 | | `fs:write` | B→A | `{path, content}` |
@@ -235,7 +307,8 @@ All messages use a JSON envelope:
 | | `fs:rename` | B→A | `{oldPath, newPath}` |
 | | `fs:stat` | B→A | `{path}` → `{exists, type, size}` |
 | | `fs:watch:event` | A→B | `{event, path}` |
-| **Terminal** | `terminal:create` | B→A | `{cols, rows}` → `{terminalId}` |
+| **Terminal** | `terminal:shells` | B→A | → `{shells[], default}` |
+| | `terminal:create` | B→A | `{cols, rows, shell?}` → `{terminalId}` |
 | | `terminal:input` | B→A | `{terminalId, data}` |
 | | `terminal:output` | A→B | `{terminalId, data}` |
 | | `terminal:resize` | B→A | `{terminalId, cols, rows}` |
@@ -262,78 +335,121 @@ All messages use a JSON envelope:
 
 Direction: B = Browser, A = Agent, R = Relay
 
+## Security
+
+### Implemented Protections
+
+- **First-message auth**: JWT token sent via WS message, never in URL
+- **RELAY_SECRET**: Env var only, no hardcoded defaults
+- **Rate limiting**: 5/min admin login, 10/min auth login (per IP)
+- **Timing-safe comparison**: `crypto.timingSafeEqual` for admin password
+- **CORS whitelist**: `ALLOWED_ORIGINS` env var, dev mode allows localhost
+- **File permissions**: `~/.opencode/config.json` chmod 0600
+- **Admin blocked by default**: No `ADMIN_PASSWORD` = dashboard returns 503
+- **bcrypt hashing**: Cost factor 10 for machine passwords
+- **Path traversal prevention**: `pathSecurity.ts` blocks `../` access
+
+### Two Auth Systems
+
+- **Machine auth**: JWT signed by agent's secret, for browser → agent sessions (24h)
+- **Admin auth**: HMAC-signed HttpOnly cookie, for relay dashboard access (separate `ADMIN_PASSWORD`)
+
 ## Key Design Decisions
 
+### Monorepo with Shared Package
+
+Protocol types defined once in `@vscode-remote/shared`, consumed by both agent and relay. Agent uses **tsup** to inline shared into the npm bundle — no workspace dependency at runtime.
+
 ### Lazy File Watcher
+
 The chokidar watcher uses a subscriber counting model. `addSubscriber()` starts the watcher on first browser connect, `removeSubscriber()` stops it when the last browser disconnects. This prevents ENOSPC errors on large repos with no active users.
 
+### Auto-reload Open Files
+
+When a file open in the editor is modified externally (terminal, git, another process), the `fs:watch:event` triggers a re-read. Clean files update immediately; dirty files only update their baseline (`originalContent`) to keep the dirty state accurate.
+
+### Shell Selection
+
+Agent detects available shells on the host (PowerShell, cmd, Git Bash on Windows; bash, zsh, sh on Unix). The terminal UI shows a dropdown to choose shell type when creating a new terminal.
+
+### Voice Input
+
+The terminal header includes a mic button (Web Speech API) for mobile users. Press-and-hold to speak, release to paste transcript into terminal. Hidden on unsupported browsers.
+
 ### Nullable Workspace Root
+
 `config.workspaceRoot` is `string | null`. When null, the editor shows an empty window with "Open Folder" button. All file/git operations are guarded by `pathSecurity.ts` which throws if no workspace is set.
 
 ### Session-scoped Auth
-Tokens are stored in `sessionStorage` (not localStorage) so each browser tab has its own session. Closing the tab clears the token. The editor page uses `setTimeout` to auto-redirect on token expiry.
+
+Tokens are stored in `sessionStorage` (not localStorage) so each browser tab has its own session. Closing the tab clears the token.
 
 ### Relay Architecture
+
 The agent connects **outbound** to the relay server. This means no ports need to be opened on the remote machine. The relay acts as a WS hub, routing messages between browsers and agents by `machineId`.
 
-### Port Forwarding via Cloudflare Tunnel
-Port forwarding creates a Cloudflare Tunnel (`cloudflared tunnel --url http://localhost:<port>`). The tunnel URL is a public HTTPS endpoint. The in-editor preview embeds this URL in an iframe split panel.
-
-### Admin vs Machine Auth
-Two separate auth systems:
-- **Machine auth**: JWT signed by agent's secret, for browser → agent sessions
-- **Admin auth**: HMAC-signed cookie, for relay dashboard access. Separate password (`ADMIN_PASSWORD` env var)
-
-## Config File
-
-Agent stores config at `~/.opencode/config.json`:
-
-```json
-{
-  "machineId": "940195819",
-  "passwords": {
-    "random": { "hash": "$2b$...", "displayValue": "aB3xK9mQ" },
-    "fixed": null
-  },
-  "settings": {
-    "relayUrl": "ws://localhost:9001/api/agent-ws",
-    "localPort": 9000,
-    "workspaceRoot": null,
-    "maxTerminals": 5,
-    "maxFileSize": 10485760,
-    "jwtSecret": "..."
-  }
-}
-```
-
 ## Development Scripts
+
+### Root (monorepo)
+
+```bash
+npm run build:shared            # Build shared package (must run first)
+npm run build:agent             # Build agent with tsup
+npm run build:relay             # Next.js production build
+npm run build                   # Build all (shared → agent → relay)
+npm run build:relay:full        # Build shared + relay (for deploy)
+npm run dev:agent               # Agent watch mode
+npm run dev:relay               # Relay dev mode (Turbopack)
+npm run publish:agent           # Build shared + publish agent to npm
+```
 
 ### Agent
 
 ```bash
-npm run dev          # Watch mode with tsx
-npm run build        # Compile TypeScript
-npm start            # Run compiled output
-npm run dev:cli      # Test CLI commands
+npm run dev                     # Watch mode with tsx
+npm run build                   # tsup build
+npm start                       # Run compiled output
+npm run dev:cli                 # Test CLI commands
 ```
 
 ### Relay
 
 ```bash
-npm run dev          # Custom server with tsx (Turbopack)
-npm run build        # Next.js production build
-npm start            # Production server
-npm run lint         # ESLint
+npm run dev                     # Custom server with tsx (Turbopack)
+npm run build                   # Next.js production build
+npm start                       # Production server
+npm run lint                    # ESLint
 ```
+
+## Deployment
+
+### Railway (Relay Server)
+
+1. **Root directory**: `/` (monorepo root)
+2. **Build command**: `npm install && npm run build:relay:full`
+3. **Start command**: `npm run start -w relay`
+4. **Environment variables**:
+   - `RELAY_SECRET` — must match agent's RELAY_SECRET
+   - `ADMIN_PASSWORD` — admin dashboard password
+   - `NODE_ENV=production`
+   - `PORT` — Railway sets this automatically
+
+### Agent (npm publish)
+
+```bash
+npm run publish:agent
+```
+
+Users install with: `npm install -g opencode-remote`
 
 ## Adding a New Feature
 
 ### New WS Message Type
 
-1. Add types + MSG constant in `agent/src/protocol.ts`
-2. Add handler in `agent/src/handlers/` (or extend existing)
-3. Register in `agent/src/handlers/router.ts`
-4. Mirror types in `relay/lib/ws/protocol.ts`
+1. Add types + MSG constant in `shared/src/protocol.ts`
+2. Run `npm run build:shared`
+3. Add handler in `agent/src/handlers/` (or extend existing)
+4. Router dispatches automatically by type prefix (`agent/src/handlers/router.ts`)
 5. Add hook in `relay/lib/hooks/` if needed
 6. Add store in `relay/store/` if state needs to persist across components
 

@@ -15,8 +15,9 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Load .env from monorepo root (npm workspaces sets CWD to package dir)
+// Load .env: try monorepo root first, then CWD (for standalone deploy)
 loadEnvConfig(path.resolve(__dirname, ".."));
+loadEnvConfig(process.cwd());
 
 const dev = process.env.NODE_ENV !== "production";
 const port = parseInt(process.env.PORT || "9001", 10);
