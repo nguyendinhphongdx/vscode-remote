@@ -81,6 +81,12 @@ export interface FsWatchEvent {
 
 // ============ Terminal Types ============
 
+export interface ShellInfo {
+  id: string;
+  name: string;
+  path: string;
+}
+
 export interface TerminalCreatePayload {
   cols: number;
   rows: number;
@@ -89,6 +95,11 @@ export interface TerminalCreatePayload {
 
 export interface TerminalCreateResponse {
   terminalId: string;
+}
+
+export interface TerminalShellsResponse {
+  shells: ShellInfo[];
+  default: string;
 }
 
 export interface TerminalInputPayload {
@@ -127,10 +138,16 @@ export interface PortInfo {
 export interface PortListResponse {
   ports: PortInfo[];
   forwarded: number[];
+  tunnelUrls: Record<number, string | null>;
 }
 
 export interface PortForwardPayload {
   port: number;
+}
+
+export interface PortForwardResponse {
+  port: number;
+  tunnelUrl: string;
 }
 
 // ============ Git Types ============
@@ -173,21 +190,27 @@ export interface GitDiffResponse {
 // ============ Workspace Types ============
 
 export interface WorkspaceBrowsePayload {
-  path: string; // absolute path to list directories from
+  path: string;
+}
+
+export interface WorkspaceBrowseEntry {
+  name: string;
+  path: string;
+  type: 'directory' | 'file';
 }
 
 export interface WorkspaceBrowseResponse {
   path: string;
-  entries: { name: string; path: string; type: 'directory' | 'file' }[];
+  entries: WorkspaceBrowseEntry[];
 }
 
 export interface WorkspaceInfoResponse {
-  workspaceRoot: string;
-  folderName: string;
+  workspaceRoot: string | null;
+  folderName: string | null;
 }
 
 export interface WorkspaceChangePayload {
-  path: string; // absolute path to new workspace
+  path: string;
 }
 
 // ============ Auth Types ============
@@ -237,6 +260,7 @@ export const MSG = {
   FS_WATCH_EVENT: 'fs:watch:event',
 
   // Terminal
+  TERMINAL_SHELLS: 'terminal:shells',
   TERMINAL_CREATE: 'terminal:create',
   TERMINAL_INPUT: 'terminal:input',
   TERMINAL_OUTPUT: 'terminal:output',

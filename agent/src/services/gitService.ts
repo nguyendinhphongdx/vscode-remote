@@ -1,7 +1,7 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { config } from '../config.js';
-import type { GitFileStatus, GitStatusEntry } from '../protocol.js';
+import type { GitFileStatus, GitStatusEntry } from '@vscode-remote/shared';
 
 const execFileAsync = promisify(execFile);
 

@@ -2,7 +2,7 @@ import { watch, type FSWatcher } from 'chokidar';
 import path from 'path';
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
-import type { FsWatchEvent } from '../protocol.js';
+import type { FsWatchEvent } from '@vscode-remote/shared';
 
 type WatchCallback = (event: FsWatchEvent) => void;
 

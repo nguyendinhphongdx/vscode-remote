@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { GitFileStatus, GitStatusEntry } from "@/lib/ws/protocol";
+import type { GitFileStatus, GitStatusEntry } from '@vscode-remote/shared';
 
 export interface GitFileInfo {
   path: string;

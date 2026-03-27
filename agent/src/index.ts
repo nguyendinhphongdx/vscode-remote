@@ -3,9 +3,8 @@ import { RelayClient } from './relay/relayClient.js';
 import { createLocalServer } from './server/local.js';
 import { stopWatcher, onFileChange } from './services/watcherService.js';
 import { closeAllTerminals } from './services/ptyService.js';
-import { MSG } from './protocol.js';
+import { MSG } from '@vscode-remote/shared';
 import { logger } from './utils/logger.js';
-import { AGENT_SECRET } from './constants.js';
 
 async function main() {
   await configStore.initialize();
@@ -16,11 +15,10 @@ async function main() {
   const formattedId = `${mid.slice(0,3)}-${mid.slice(3,6)}-${mid.slice(6)}`;
   logger.info('='.repeat(40));
   logger.info(`  Machine ID : ${formattedId}`);
-  if (store.passwords.random) {
-    logger.info(`  Password   : ${store.passwords.random.displayValue}`);
-  }
+  const pw = configStore.getRandomPassword();
+  logger.info(`  Password   : ${pw || '(none — use fixed password)'}`)
   logger.info(`  Relay      : ${config.relayUrl}`);
-  logger.info(`  Secret      : ${AGENT_SECRET}`);
+  logger.info(`  Secret     : ${process.env.RELAY_SECRET ? '***configured***' : '⚠ NOT SET'}`);
   logger.info('='.repeat(40));
 
   // Create relay client (outbound WS to relay server)

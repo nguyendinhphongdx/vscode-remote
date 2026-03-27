@@ -160,8 +160,8 @@ function cmdPassword() {
   }
 
   // Show current password
-  if (config.passwords?.random?.displayValue) {
-    console.log(`Random password: ${config.passwords.random.displayValue}`);
+  if (config.passwords?.random) {
+    console.log('Random password: *** (use "opencode password --regenerate" to get a new one)');
   }
   if (config.passwords?.fixed) {
     console.log('Fixed password:  (set)');
@@ -411,8 +411,8 @@ function showAgentInfo() {
     const formatted = `${mid.slice(0, 3)}-${mid.slice(3, 6)}-${mid.slice(6)}`;
     console.log(`  Machine ID : ${formatted}`);
   }
-  if (config.passwords?.random?.displayValue) {
-    console.log(`  Password   : ${config.passwords.random.displayValue}`);
+  if (config.passwords?.random) {
+    console.log(`  Password   : *** (saved at first run)`);
   }
   const port = config.settings?.localPort || 9000;
   console.log(`  Admin UI   : http://localhost:${port}`);

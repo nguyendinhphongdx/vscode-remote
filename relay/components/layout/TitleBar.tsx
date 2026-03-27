@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useAuth } from "@/components/providers/AuthProvider";
 import { useWebSocket } from "@/components/providers/WebSocketProvider";
 import { useGitStore } from "@/store/gitStore";
 import { useWorkspaceStore } from "@/store/workspaceStore";
-import { MSG, type WorkspaceInfoResponse } from "@/lib/ws/protocol";
+import { MSG, type WorkspaceInfoResponse } from '@vscode-remote/shared';
 import {
   Search,
   Settings,
@@ -34,6 +35,7 @@ export function TitleBar({ onOpenFolder }: TitleBarProps) {
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const menuBarRef = useRef<HTMLDivElement>(null);
   const { branch } = useGitStore();
+  const { logout } = useAuth();
 
   const menus: Menu[] = [
     {
@@ -253,7 +255,7 @@ export function TitleBar({ onOpenFolder }: TitleBarProps) {
           <button className="px-3 h-full hover:bg-[#505050] flex items-center" title="Maximize">
             <Square size={12} />
           </button>
-          <button className="px-3 h-full hover:bg-[#e81123] hover:text-white flex items-center" title="Close">
+          <button onClick={logout} className="px-3 h-full hover:bg-[#e81123] hover:text-white flex items-center" title="Sign out">
             <X size={14} />
           </button>
         </div>

@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { useWebSocket } from "@/components/providers/WebSocketProvider";
 import { useGitStore } from "@/store/gitStore";
-import { MSG, type GitStatusResponse, type GitCommitResponse } from "@/lib/ws/protocol";
+import { MSG, type GitStatusResponse, type GitCommitResponse } from '@vscode-remote/shared';
 
 export function useGit() {
   const { ws } = useWebSocket();

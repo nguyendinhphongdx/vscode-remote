@@ -1,10 +1,11 @@
+declare const __BUILD_RELAY_URL__: string;
+
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
 import type { PersistedConfig, AgentSettings } from '../types/config.types.js';
 import { generateMachineId } from './machineId.js';
 import { generateRandomPassword, hashPassword } from './passwordService.js';
-import { DEFAULT_RELAY_URL } from '../constants.js';
 
 import os from 'os';
 const DATA_DIR = process.env.VSR_DATA_DIR || path.join(os.homedir(), '.opencode');
@@ -21,13 +22,14 @@ async function writeConfig(config: PersistedConfig): Promise<void> {
   const tmpPath = CONFIG_PATH + '.tmp';
   await fs.writeFile(tmpPath, JSON.stringify(config, null, 2), 'utf-8');
   await fs.rename(tmpPath, CONFIG_PATH);
+  // Restrict file permissions (owner-only read/write) on Unix
+  try { await fs.chmod(CONFIG_PATH, 0o600); } catch { /* Windows ignores chmod */ }
   currentConfig = config;
 }
 
 async function createDefaultConfig(): Promise<PersistedConfig> {
   const randomPassword = generateRandomPassword();
   const randomHash = await hashPassword(randomPassword);
-
   const config: PersistedConfig = {
     machineId: generateMachineId(),
     passwords: {
@@ -35,7 +37,7 @@ async function createDefaultConfig(): Promise<PersistedConfig> {
       fixed: null,
     },
     settings: {
-      relayUrl: process.env.RELAY_URL || DEFAULT_RELAY_URL,
+      relayUrl: process.env.RELAY_URL || __BUILD_RELAY_URL__ || '',
       localPort: parseInt(process.env.LOCAL_PORT || '9000', 10),
       workspaceRoot: process.env.WORKSPACE_ROOT ? path.resolve(process.env.WORKSPACE_ROOT) : null,
       maxTerminals: 5,
@@ -84,6 +86,10 @@ export async function regenerateRandomPassword(): Promise<string> {
   config.passwords.random = { hash, displayValue: plain };
   await writeConfig(config);
   return plain;
+}
+
+export function getRandomPassword(): string | null {
+  return get().passwords.random?.displayValue || null;
 }
 
 export async function setFixedPassword(plain: string): Promise<void> {

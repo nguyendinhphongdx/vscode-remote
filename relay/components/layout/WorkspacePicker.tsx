@@ -7,7 +7,7 @@ import {
   MSG,
   type WorkspaceBrowseResponse,
   type WorkspaceInfoResponse,
-} from "@/lib/ws/protocol";
+} from '@vscode-remote/shared';
 import { Folder, ChevronRight, CornerDownLeft } from "lucide-react";
 
 interface Props {

@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { useWebSocket } from "@/components/providers/WebSocketProvider";
 import { usePortStore } from "@/store/portStore";
-import { MSG, type PortListResponse, type PortForwardResponse } from "@/lib/ws/protocol";
+import { MSG, type PortListResponse, type PortForwardResponse } from '@vscode-remote/shared';
 
 export function usePorts() {
   const { ws } = useWebSocket();

@@ -14,7 +14,7 @@ import {
   ChevronRight,
   Check,
 } from "lucide-react";
-import type { GitFileStatus } from "@/lib/ws/protocol";
+import type { GitFileStatus } from '@vscode-remote/shared';
 
 const statusLabels: Record<string, string> = {
   M: "Modified",

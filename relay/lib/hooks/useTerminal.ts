@@ -3,18 +3,27 @@
 import { useCallback } from "react";
 import { useWebSocket } from "@/components/providers/WebSocketProvider";
 import { useTerminalStore } from "@/store/terminalStore";
-import { MSG, type TerminalCreateResponse } from "@/lib/ws/protocol";
+import { MSG, type TerminalCreateResponse, type TerminalShellsResponse, type ShellInfo } from '@vscode-remote/shared';
 
 export function useTerminal() {
   const { ws } = useWebSocket();
   const { addSession, removeSession, setActiveSession } = useTerminalStore();
 
+  const fetchShells = useCallback(
+    async () => {
+      if (!ws) return null;
+      return ws.send<TerminalShellsResponse>(MSG.TERMINAL_SHELLS, {});
+    },
+    [ws]
+  );
+
   const createTerminal = useCallback(
-    async (cols: number, rows: number) => {
+    async (cols: number, rows: number, shell?: string) => {
       if (!ws) return null;
       const result = await ws.send<TerminalCreateResponse>(MSG.TERMINAL_CREATE, {
         cols,
         rows,
+        shell,
       });
       addSession({
         id: result.terminalId,
@@ -51,5 +60,5 @@ export function useTerminal() {
     [ws, removeSession]
   );
 
-  return { createTerminal, sendInput, resize, closeTerminal, setActiveSession };
+  return { fetchShells, createTerminal, sendInput, resize, closeTerminal, setActiveSession };
 }

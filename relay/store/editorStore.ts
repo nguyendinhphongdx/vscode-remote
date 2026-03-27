@@ -21,6 +21,7 @@ interface EditorState {
   updateContent: (id: string, content: string) => void;
   markSaved: (id: string, content: string) => void;
   pinTab: (id: string) => void;
+  externalUpdate: (id: string, content: string) => void;
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -100,6 +101,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((state) => ({
       tabs: state.tabs.map((t) =>
         t.id === id ? { ...t, isPreview: false } : t
+      ),
+    })),
+
+  externalUpdate: (id, content) =>
+    set((state) => ({
+      tabs: state.tabs.map((t) =>
+        t.id === id
+          ? t.isDirty
+            ? { ...t, originalContent: content } // dirty: only update baseline
+            : { ...t, content, originalContent: content, isDirty: false } // clean: update content
+          : t
       ),
     })),
 }));

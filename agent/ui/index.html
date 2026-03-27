@@ -97,6 +97,14 @@
     }
     .btn-secondary:hover { background: #4a4a4a; }
     .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-icon {
+      background: #3c3c3c; border: 1px solid #555; border-radius: 4px;
+      color: #ccc; font-size: 16px; width: 28px; height: 28px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background 0.1s;
+    }
+    .btn-icon:hover { background: #4a4a4a; color: #fff; }
+    .btn-icon:disabled { opacity: 0.4; cursor: not-allowed; }
     .restart-note { font-size: 11px; color: #e2c08d; margin-top: 8px; }
 
     /* Docs page */
@@ -198,7 +206,10 @@
           </div>
           <div class="info-row">
             <span class="info-label">Password</span>
-            <span class="info-value password" id="password">---</span>
+            <span style="display:flex;align-items:center;gap:8px">
+              <span class="info-value password" id="password">---</span>
+              <button onclick="regeneratePassword()" id="regenBtn" class="btn-icon" title="Regenerate password">&#x21bb;</button>
+            </span>
           </div>
           <div class="info-row">
             <span class="info-label">Relay</span>
@@ -283,6 +294,7 @@
       'port-forwarding': '🌐',
       'terminal': '⬛',
       'file-system': '📁',
+      'claude-code': '🤖',
     };
 
     async function loadDocsNav() {
@@ -550,6 +562,24 @@
     document.getElementById('remotePassword').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') connectRemote();
     });
+
+    // ===== Regenerate Password =====
+    async function regeneratePassword() {
+      const btn = document.getElementById('regenBtn');
+      if (!confirm('Generate a new password? The old one will stop working.')) return;
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/password/regenerate', { method: 'POST' });
+        const data = await res.json();
+        if (data.password) {
+          document.getElementById('password').textContent = data.password;
+        }
+      } catch {
+        // ignore
+      } finally {
+        btn.disabled = false;
+      }
+    }
 
     // ===== Settings =====
     function toggleSettings() {

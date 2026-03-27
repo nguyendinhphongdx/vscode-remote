@@ -6,7 +6,7 @@ import { useGit } from "@/lib/hooks/useGit";
 import { useFileStore } from "@/store/fileStore";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 import { useWebSocket } from "@/components/providers/WebSocketProvider";
-import { MSG, type FsWatchEvent } from "@/lib/ws/protocol";
+import { MSG, type FsWatchEvent } from '@vscode-remote/shared';
 import { FileTreeNode } from "./FileTreeNode";
 import { NewFileDialog } from "./NewFileDialog";
 import { FilePlus, FolderPlus, FolderOpen, RefreshCw } from "lucide-react";

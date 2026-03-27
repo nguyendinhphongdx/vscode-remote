@@ -1,6 +1,6 @@
 import type { WebSocket } from 'ws';
-import { MSG } from '../protocol.js';
-import type { GitStagePayload, GitCommitPayload, GitDiffPayload } from '../protocol.js';
+import { MSG } from '@vscode-remote/shared';
+import type { GitStagePayload, GitCommitPayload, GitDiffPayload } from '@vscode-remote/shared';
 import * as gitService from '../services/gitService.js';
 import { sendResponse } from './router.js';
 

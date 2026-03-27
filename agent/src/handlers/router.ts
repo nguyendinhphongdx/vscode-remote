@@ -1,6 +1,6 @@
 import type { WebSocket } from 'ws';
 import { v4 as uuid } from 'uuid';
-import type { WSMessage, WSResponse } from '../protocol.js';
+import type { WSMessage, WSResponse } from '@vscode-remote/shared';
 import { logger } from '../utils/logger.js';
 import { handleFsMessage } from './fileSystem.js';
 import { handleTerminalMessage } from './terminal.js';

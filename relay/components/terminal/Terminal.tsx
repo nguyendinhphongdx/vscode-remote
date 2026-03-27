@@ -5,7 +5,7 @@ import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { useWebSocket } from "@/components/providers/WebSocketProvider";
 import { useTerminal } from "@/lib/hooks/useTerminal";
-import { MSG, type TerminalOutputPayload, type TerminalExitEvent } from "@/lib/ws/protocol";
+import { MSG, type TerminalOutputPayload, type TerminalExitEvent } from '@vscode-remote/shared';
 import "@xterm/xterm/css/xterm.css";
 
 interface TerminalProps {

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { FileEntry } from "@/lib/ws/protocol";
+import type { FileEntry } from '@vscode-remote/shared';
 
 interface FileState {
   tree: Map<string, FileEntry[]>; // parentPath -> children

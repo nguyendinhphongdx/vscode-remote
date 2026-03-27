@@ -1,5 +1,5 @@
 import type { WebSocket } from 'ws';
-import { MSG } from '../protocol.js';
+import { MSG } from '@vscode-remote/shared';
 import type {
   FsListPayload,
   FsReadPayload,
@@ -8,7 +8,7 @@ import type {
   FsDeletePayload,
   FsRenamePayload,
   FsStatPayload,
-} from '../protocol.js';
+} from '@vscode-remote/shared';
 import * as fileService from '../services/fileService.js';
 import { sendResponse } from './router.js';
 

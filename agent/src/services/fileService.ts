@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { resolveSafePathWithSymlink } from '../utils/pathSecurity.js';
 import { config } from '../config.js';
-import type { FileEntry } from '../protocol.js';
+import type { FileEntry } from '@vscode-remote/shared';
 
 export async function listDirectory(dirPath: string): Promise<FileEntry[]> {
   const resolved = await resolveSafePathWithSymlink(dirPath);

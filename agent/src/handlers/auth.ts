@@ -1,5 +1,5 @@
 import type { WebSocket } from 'ws';
-import { MSG } from '../protocol.js';
+import { MSG } from '@vscode-remote/shared';
 import { config, configStore } from '../config.js';
 import { signToken, verifyToken } from '../auth/jwt.js';
 import { verifyPassword } from '../services/passwordService.js';

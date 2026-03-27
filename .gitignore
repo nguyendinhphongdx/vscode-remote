@@ -39,3 +39,5 @@ next-env.d.ts
 sw.js.map
 workbox-*.js
 workbox-*.js.map
+
+.claude

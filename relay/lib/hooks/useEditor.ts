@@ -1,14 +1,38 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useEditorStore } from "@/store/editorStore";
 import { useFileSystem } from "./useFileSystem";
+import { useWebSocket } from "@/components/providers/WebSocketProvider";
 import { getLanguageFromPath } from "@/lib/utils/language";
+import { MSG, type FsWatchEvent } from "@vscode-remote/shared";
 
 export function useEditor() {
-  const { openTab, closeTab, setActiveTab, updateContent, markSaved, pinTab, tabs, activeTabId } =
+  const { openTab, closeTab, setActiveTab, updateContent, markSaved, pinTab, externalUpdate, tabs, activeTabId } =
     useEditorStore();
   const { readFile, writeFile, statFile } = useFileSystem();
+  const { ws } = useWebSocket();
+
+  // Auto-reload open files when changed externally
+  useEffect(() => {
+    if (!ws) return;
+    const unsub = ws.on(MSG.FS_WATCH_EVENT, async (payload) => {
+      const event = payload as FsWatchEvent;
+      if (event.event !== "change") return;
+
+      const { tabs: currentTabs } = useEditorStore.getState();
+      const matchingTab = currentTabs.find((t) => t.path === event.path);
+      if (!matchingTab) return;
+
+      try {
+        const content = await readFile(event.path);
+        externalUpdate(matchingTab.id, content);
+      } catch {
+        // File might have been deleted, ignore
+      }
+    });
+    return unsub;
+  }, [ws, readFile, externalUpdate]);
 
   const doOpen = useCallback(
     async (path: string, preview: boolean) => {

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { PortInfo } from "@/lib/ws/protocol";
+import type { PortInfo } from '@vscode-remote/shared';
 
 interface PortState {
   ports: PortInfo[];

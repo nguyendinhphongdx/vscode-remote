@@ -1,6 +1,6 @@
 import type { WebSocket } from 'ws';
-import { MSG } from '../protocol.js';
-import type { PortForwardPayload } from '../protocol.js';
+import { MSG } from '@vscode-remote/shared';
+import type { PortForwardPayload } from '@vscode-remote/shared';
 import * as portService from '../services/portService.js';
 import * as tunnelService from '../services/tunnelService.js';
 import { sendResponse } from './router.js';

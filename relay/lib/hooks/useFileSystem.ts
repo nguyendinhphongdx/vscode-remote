@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { useWebSocket } from "@/components/providers/WebSocketProvider";
 import { useFileStore } from "@/store/fileStore";
-import { MSG, type FsListResponse, type FsReadResponse, type FsStatResponse } from "@/lib/ws/protocol";
+import { MSG, type FsListResponse, type FsReadResponse, type FsStatResponse } from '@vscode-remote/shared';
 
 export function useFileSystem() {
   const { ws } = useWebSocket();

@@ -1,6 +1,6 @@
 export interface PasswordEntry {
   hash: string;
-  displayValue: string;
+  displayValue?: string;
 }
 
 export interface PersistedConfig {

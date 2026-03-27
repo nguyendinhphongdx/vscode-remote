@@ -48,8 +48,8 @@ export function AppShell() {
     setFolderPickerOpen(true);
   }, []);
 
-  const handleCreateTerminal = useCallback(async () => {
-    const id = await createTerminal(80, 24);
+  const handleCreateTerminal = useCallback(async (shell?: string) => {
+    const id = await createTerminal(80, 24, shell);
     if (id) setShowTerminal(true);
   }, [createTerminal]);
 

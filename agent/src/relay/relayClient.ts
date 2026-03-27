@@ -1,10 +1,9 @@
 import WebSocket from 'ws';
 import { v4 as uuid } from 'uuid';
-import { MSG, type WSMessage, type WSResponse } from '../protocol.js';
+import { MSG, type WSMessage, type WSResponse } from '@vscode-remote/shared';
 import { routeMessage, sendEvent } from '../handlers/router.js';
 import { addSubscriber, removeSubscriber } from '../services/watcherService.js';
 import { logger } from '../utils/logger.js';
-import { AGENT_SECRET } from '../constants.js';
 
 export class RelayClient {
   private ws: WebSocket | null = null;
@@ -36,7 +35,7 @@ export class RelayClient {
       const registerMsg: WSMessage = {
         id: uuid(),
         type: MSG.AGENT_REGISTER,
-        payload: { machineId: this.machineId, secret: AGENT_SECRET },
+        payload: { machineId: this.machineId, secret: process.env.RELAY_SECRET || '' },
       };
       this.ws!.send(JSON.stringify(registerMsg));
     });

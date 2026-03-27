@@ -1,5 +1,5 @@
 import { v4 as uuid } from "uuid";
-import type { WSMessage, WSResponse } from "./protocol";
+import type { WSMessage, WSResponse } from '@vscode-remote/shared';
 
 type EventHandler = (payload: unknown) => void;
 
@@ -9,7 +9,7 @@ interface PendingRequest {
   timeout: ReturnType<typeof setTimeout>;
 }
 
-export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "auth_expired";
+export type ConnectionStatus = "connecting" | "authenticating" | "connected" | "disconnected" | "auth_expired";
 
 export class WebSocketClient {
   private ws: WebSocket | null = null;
@@ -31,17 +31,19 @@ export class WebSocketClient {
     this.shouldReconnect = true;
     this.notifyStatus("connecting");
 
-    const separator = this.url.includes("?") ? "&" : "?";
-    const wsUrl = `${this.url}${separator}token=${encodeURIComponent(this.token)}`;
-    console.log("[ws] Connecting to:", wsUrl.substring(0, 50) + "...");
+    // Token is NOT in URL — sent via first message after connection
+    console.log("[ws] Connecting to:", this.url);
     const connectStart = Date.now();
-    this.ws = new WebSocket(wsUrl);
+    this.ws = new WebSocket(this.url);
 
     this.ws.onopen = () => {
-      console.log("[ws] Connected");
+      console.log("[ws] Connected, authenticating...");
+      this.notifyStatus("authenticating");
       this.reconnectDelay = 1000;
       this.consecutiveQuickFailures = 0;
-      this.notifyStatus("connected");
+
+      // Send token via first message
+      this.authenticate();
     };
 
     this.ws.onmessage = (event) => {
@@ -53,11 +55,9 @@ export class WebSocketClient {
 
       this.rejectAllPending();
 
-      // Track consecutive quick failures (connection rejected before opening)
       const elapsed = Date.now() - connectStart;
       if (elapsed < 2000) {
         this.consecutiveQuickFailures++;
-        // 3+ consecutive quick failures = likely auth issue, stop retrying
         if (this.consecutiveQuickFailures >= 3) {
           console.log("[ws] Too many quick failures, likely auth expired");
           this.shouldReconnect = false;
@@ -77,6 +77,41 @@ export class WebSocketClient {
     this.ws.onerror = (event) => {
       console.log("[ws] Error:", event);
     };
+  }
+
+  private authenticate(): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+
+    const id = uuid();
+    const msg: WSMessage = {
+      id,
+      type: "auth:authenticate",
+      payload: { token: this.token },
+    };
+
+    // Track the auth request as pending
+    const timeout = setTimeout(() => {
+      this.pendingRequests.delete(id);
+      console.log("[ws] Auth timeout");
+      this.shouldReconnect = false;
+      this.notifyStatus("auth_expired");
+      this.ws?.close();
+    }, 10000);
+
+    this.pendingRequests.set(id, {
+      resolve: () => {
+        console.log("[ws] Authenticated");
+        this.notifyStatus("connected");
+      },
+      reject: (err) => {
+        console.log("[ws] Auth failed:", err.message);
+        this.shouldReconnect = false;
+        this.notifyStatus("auth_expired");
+      },
+      timeout,
+    });
+
+    this.ws.send(JSON.stringify(msg));
   }
 
   disconnect(): void {

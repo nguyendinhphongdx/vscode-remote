@@ -9,7 +9,7 @@ import { FileContextMenu } from "./FileContextMenu";
 import { NewFileDialog } from "./NewFileDialog";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { getFileIconComponent, getFolderIconComponent } from "@/lib/utils/fileIcons";
-import type { FileEntry } from "@/lib/ws/protocol";
+import type { FileEntry } from '@vscode-remote/shared';
 import { ChevronRight, ChevronDown } from "lucide-react";
 
 interface FileTreeNodeProps {

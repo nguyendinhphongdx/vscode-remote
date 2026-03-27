@@ -48,6 +48,12 @@ export function createLocalServer(relayClient: RelayClient) {
     res.json({ editorUrl });
   });
 
+  // API: regenerate random password
+  app.post('/api/password/regenerate', async (_req, res) => {
+    const newPassword = await configStore.regenerateRandomPassword();
+    res.json({ password: newPassword });
+  });
+
   // API: get settings
   app.get('/api/settings', (_req, res) => {
     const store = configStore.get();
