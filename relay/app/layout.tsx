@@ -13,8 +13,41 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "VS Code Remote",
-  description: "Remote VS Code access from anywhere",
+  title: {
+    default: "VS Code Remote — Vibecode everywhere",
+    template: "%s | VS Code Remote",
+  },
+  description:
+    "Access your remote development environment from any browser. Full VS Code experience with terminal, file explorer, git integration, and port forwarding — secured with JWT authentication.",
+  keywords: [
+    "remote development",
+    "VS Code",
+    "code editor",
+    "browser IDE",
+    "remote terminal",
+    "port forwarding",
+    "git integration",
+    "WebSocket",
+    "PWA",
+  ],
+  authors: [{ name: "VS Code Remote" }],
+  openGraph: {
+    type: "website",
+    title: "VS Code Remote — Vibecode everywhere",
+    description:
+      "Connect to your remote machine with a 9-digit code. Full VS Code experience with terminal, file explorer, git, and port forwarding — all in your browser.",
+    siteName: "VS Code Remote",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "VS Code Remote — Vibecode everywhere",
+    description:
+      "Secure remote development from anywhere. Terminal, file explorer, git, port forwarding — all in your browser.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -50,7 +83,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="h-full overflow-hidden bg-bg-primary text-text-primary font-mono">
+      <body className="h-full overflow-hidden">
         {children}
       </body>
     </html>

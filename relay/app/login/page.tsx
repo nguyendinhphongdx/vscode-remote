@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 
 function formatMachineId(value: string): string {
@@ -19,7 +19,6 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   // Auto-fill from query params (when coming from agent UI)
@@ -68,7 +67,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="h-full flex items-center justify-center bg-bg-primary">
+    <div className="h-full flex items-center justify-center bg-bg-primary text-text-primary font-mono">
       <div className="w-full max-w-sm p-8">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-text-primary mb-2">

@@ -8,7 +8,11 @@ export default function EditorLayout({
 }) {
   return (
     <AuthProvider>
-      <WebSocketProvider>{children}</WebSocketProvider>
+      <WebSocketProvider>
+        <div className="h-full bg-bg-primary text-text-primary font-mono text-[13px]">
+          {children}
+        </div>
+      </WebSocketProvider>
     </AuthProvider>
   );
 }

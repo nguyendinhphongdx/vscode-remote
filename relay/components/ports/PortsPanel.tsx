@@ -9,6 +9,7 @@ import {
   Globe,
   GlobeLock,
   ExternalLink,
+  AppWindow,
   Play,
   Square,
   Copy,
@@ -16,7 +17,11 @@ import {
   Loader2,
 } from "lucide-react";
 
-export function PortsPanel() {
+interface PortsPanelProps {
+  onPreview?: (port: number, url: string) => void;
+}
+
+export function PortsPanel({ onPreview }: PortsPanelProps) {
   const { refreshPorts, forwardPort, unforwardPort } = usePorts();
   const { ports, forwardedPorts, tunnelUrls } = usePortStore();
   const { status } = useWebSocket();
@@ -152,9 +157,18 @@ export function PortsPanel() {
               </span>
 
               {/* Actions */}
-              <span className="w-[50px] shrink-0 flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100">
+              <span className="w-[70px] shrink-0 flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100">
                 {isForwarded ? (
                   <>
+                    {tunnelUrl && onPreview && (
+                      <button
+                        onClick={() => onPreview(p.port, tunnelUrl)}
+                        className="p-0.5 rounded hover:bg-[#3c3c3c]"
+                        title="Preview in Editor"
+                      >
+                        <AppWindow size={13} className="text-[#4fc1ff]" />
+                      </button>
+                    )}
                     <button
                       onClick={() => handleCopyUrl(p.port)}
                       className="p-0.5 rounded hover:bg-[#3c3c3c]"

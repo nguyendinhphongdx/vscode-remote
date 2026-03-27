@@ -1,14 +1,28 @@
 {
-  "name": "vscode-remote-agent",
-  "version": "0.1.0",
-  "private": true,
+  "name": "opencode-agent",
+  "version": "0.3.0",
   "type": "module",
+  "description": "OpenCode — access your dev environment from anywhere",
+  "bin": {
+    "opencode": "./dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "ui/"
+  ],
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:cli": "tsx src/cli.ts",
     "build": "tsc",
+    "prepublishOnly": "tsc",
     "start": "node dist/index.js",
     "generate-secret": "tsx src/utils/generateSecret.ts"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": ["vscode", "remote", "agent", "ide", "editor", "terminal"],
+  "license": "MIT",
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "chokidar": "^4.0.0",

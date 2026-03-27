@@ -1,13 +1,12 @@
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
-import { fileURLToPath } from 'url';
 import type { PersistedConfig, AgentSettings } from '../types/config.types.js';
 import { generateMachineId } from './machineId.js';
 import { generateRandomPassword, hashPassword } from './passwordService.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.resolve(__dirname, '../../data');
+import os from 'os';
+const DATA_DIR = process.env.VSR_DATA_DIR || path.join(os.homedir(), '.opencode');
 const CONFIG_PATH = path.join(DATA_DIR, 'config.json');
 
 let currentConfig: PersistedConfig | null = null;

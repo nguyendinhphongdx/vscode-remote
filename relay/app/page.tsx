@@ -1,56 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { setToken, setMachineId } from "@/lib/auth/auth";
 import {
-  Monitor,
-  Clock,
-  Terminal,
-  Trash2,
   ArrowRight,
+  Terminal,
+  FolderTree,
+  GitBranch,
+  Globe,
+  Shield,
+  Smartphone,
+  Monitor,
   Zap,
   Code2,
-  Settings,
-  LayoutDashboard,
-  Users,
-  ChevronDown,
-  Lock,
-  LogOut,
 } from "lucide-react";
-
-interface AgentInfo {
-  machineId: string;
-  connectedAt: string;
-  browserCount: number;
-}
-
-interface RecentConnection {
-  machineId: string;
-  lastConnected: string;
-}
-
-const RECENT_KEY = "vsremote_recent";
-const MAX_RECENT = 20;
-
-function getRecent(): RecentConnection[] {
-  try {
-    return JSON.parse(localStorage.getItem(RECENT_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function addRecent(machineId: string): void {
-  const recent = getRecent().filter((r) => r.machineId !== machineId);
-  recent.unshift({ machineId, lastConnected: new Date().toISOString() });
-  localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
-}
-
-function removeRecent(machineId: string): void {
-  const recent = getRecent().filter((r) => r.machineId !== machineId);
-  localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
-}
 
 function formatMachineId(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 9);
@@ -61,155 +25,60 @@ function formatMachineId(value: string): string {
   return parts.join("-");
 }
 
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const RECENT_KEY = "vsremote_recent";
+const MAX_RECENT = 20;
+
+function addRecent(machineId: string): void {
+  try {
+    const recent = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]").filter(
+      (r: { machineId: string }) => r.machineId !== machineId
+    );
+    recent.unshift({ machineId, lastConnected: new Date().toISOString() });
+    localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
+  } catch {
+    // ignore
+  }
 }
 
-// ============ Admin Login Screen ============
+const features = [
+  {
+    icon: Terminal,
+    title: "Integrated Terminal",
+    description: "Full terminal access with split panes, right from your browser.",
+  },
+  {
+    icon: FolderTree,
+    title: "File Explorer",
+    description: "Browse, create, rename and delete files with real-time sync.",
+  },
+  {
+    icon: GitBranch,
+    title: "Git Integration",
+    description: "Stage, commit, diff and manage your repositories seamlessly.",
+  },
+  {
+    icon: Globe,
+    title: "Port Forwarding",
+    description: "Access remote services through secure HTTP-over-WebSocket tunneling.",
+  },
+  {
+    icon: Shield,
+    title: "Secure Sessions",
+    description: "JWT authentication with automatic session expiry and token verification.",
+  },
+  {
+    icon: Smartphone,
+    title: "Mobile Ready",
+    description: "Responsive design optimized for tablets and phones. Install as PWA.",
+  },
+];
 
-function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      const res = await fetch("/api/admin/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Login failed");
-      onSuccess();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="h-full flex items-center justify-center" style={{ background: "#f0f2f5", fontFamily: "var(--font-inter), sans-serif" }}>
-      <div className="w-full max-w-sm">
-        <div
-          className="rounded-2xl p-8"
-          style={{ background: "#fff", border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
-        >
-          <div className="text-center mb-6">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4"
-              style={{ background: "linear-gradient(135deg, #4f6ef7, #7c5bf6)" }}
-            >
-              <Lock size={20} className="text-white" />
-            </div>
-            <h1 className="text-xl font-bold" style={{ color: "#23233b" }}>Admin Login</h1>
-            <p className="text-sm mt-1" style={{ color: "#9ca3af" }}>Enter password to access dashboard</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="p-3 rounded-lg text-sm" style={{ background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca" }}>
-                {error}
-              </div>
-            )}
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              className="w-full px-4 py-3 rounded-lg text-sm outline-none"
-              style={{ background: "#fff", border: "1px solid #e0e3eb", color: "#23233b" }}
-              onFocus={(e) => (e.target.style.borderColor = "#4f6ef7")}
-              onBlur={(e) => (e.target.style.borderColor = "#e0e3eb")}
-              autoFocus
-              required
-            />
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-              style={{ background: "#4f6ef7" }}
-            >
-              {loading ? "Logging in..." : "Login"}
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============ Dashboard ============
-
-export default function HomePage() {
-  const [adminChecking, setAdminChecking] = useState(true);
-  const [adminAuthed, setAdminAuthed] = useState(false);
-  const [adminRequired, setAdminRequired] = useState(false);
+export default function LandingPage() {
   const [machineId, setMid] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [agents, setAgents] = useState<AgentInfo[]>([]);
-  const [recent, setRecent] = useState<RecentConnection[]>([]);
   const router = useRouter();
-
-  // Check admin auth on mount
-  useEffect(() => {
-    fetch("/api/admin/check")
-      .then((res) => res.json())
-      .then((data) => {
-        setAdminRequired(data.required);
-        setAdminAuthed(data.authenticated);
-      })
-      .catch(() => {
-        setAdminAuthed(false);
-      })
-      .finally(() => setAdminChecking(false));
-  }, []);
-
-  useEffect(() => {
-    if (!adminAuthed && adminRequired) return;
-    setRecent(getRecent());
-  }, [adminAuthed, adminRequired]);
-
-  useEffect(() => {
-    if (!adminAuthed && adminRequired) return;
-    const fetchAgents = async () => {
-      try {
-        const res = await fetch("/api/agents");
-        if (!res.ok) return;
-        const data = await res.json();
-        setAgents(data.agents || []);
-      } catch {
-        // ignore
-      }
-    };
-    fetchAgents();
-    const interval = setInterval(fetchAgents, 5000);
-    return () => clearInterval(interval);
-  }, [adminAuthed, adminRequired]);
-
-  const handleAdminLogout = async () => {
-    await fetch("/api/admin/logout", { method: "POST" });
-    setAdminAuthed(false);
-  };
-
-  if (adminChecking) {
-    return (
-      <div className="h-full flex items-center justify-center" style={{ background: "#f0f2f5" }}>
-        <div className="animate-spin w-6 h-6 border-2 border-[#4f6ef7] border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-  if (adminRequired && !adminAuthed) {
-    return <AdminLogin onSuccess={() => setAdminAuthed(true)} />;
-  }
 
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,7 +111,6 @@ export default function HomePage() {
       setToken(token);
       setMachineId(rawMid);
       addRecent(rawMid);
-      setRecent(getRecent());
       router.push(`/editor/${rawMid}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connection failed");
@@ -251,424 +119,307 @@ export default function HomePage() {
     }
   };
 
-  const handleQuickConnect = (mid: string) => {
-    setMid(formatMachineId(mid));
-    document.getElementById("password-input")?.focus();
-  };
-
-  const handleRemoveRecent = (mid: string) => {
-    removeRecent(mid);
-    setRecent(getRecent());
-  };
-
-  const now = new Date();
-  const greeting =
-    now.getHours() < 12
-      ? "Good morning"
-      : now.getHours() < 18
-        ? "Good afternoon"
-        : "Good evening";
-  const dateStr = now.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-  const timeStr = now.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-
-  const totalSessions = agents.reduce((sum, a) => sum + a.browserCount, 0);
-
   return (
-    <div className="h-full flex" style={{ background: "#f0f2f5", color: "#23233b", fontFamily: "var(--font-inter), sans-serif" }}>
-      {/* ===== Sidebar ===== */}
-      <aside
-        className="w-[200px] shrink-0 flex flex-col border-r h-full"
-        style={{ background: "#fff", borderColor: "#eaedf3" }}
-      >
-        {/* Logo */}
-        <div className="px-4 h-16 flex items-center gap-2.5 border-b" style={{ borderColor: "#eaedf3" }}>
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #4f6ef7, #7c5bf6)" }}
-          >
-            <Code2 size={16} className="text-white" />
+    <div className="h-full overflow-y-auto" style={{ background: "#09090b", color: "#fafafa", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
+      {/* ===== Nav ===== */}
+      <nav className="sticky top-0 z-50 border-b" style={{ background: "rgba(9,9,11,0.8)", borderColor: "rgba(255,255,255,0.08)", backdropFilter: "blur(12px)" }}>
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)" }}>
+              <Code2 size={16} className="text-white" />
+            </div>
+            <span className="text-sm font-semibold tracking-tight">VS Code Remote</span>
           </div>
-          <div>
-            <div className="text-sm font-bold" style={{ color: "#23233b" }}>VS Code</div>
-            <div className="text-[10px]" style={{ color: "#9ca3af" }}>Remote</div>
+          <div className="flex items-center gap-6">
+            <a href="#features" className="text-sm hidden sm:block" style={{ color: "#a1a1aa" }}>Features</a>
+            <a href="#connect" className="text-sm hidden sm:block" style={{ color: "#a1a1aa" }}>Connect</a>
+            <a
+              href="/dashboard"
+              className="text-sm px-4 py-1.5 rounded-lg border"
+              style={{ borderColor: "rgba(255,255,255,0.1)", color: "#a1a1aa" }}
+            >
+              Dashboard
+            </a>
           </div>
         </div>
+      </nav>
 
-        {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          <a
-            href="#"
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium"
-            style={{ background: "#eef1fb", color: "#4f6ef7" }}
-          >
-            <LayoutDashboard size={16} />
-            Dashboard
-          </a>
-          <a
-            href="#"
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm"
-            style={{ color: "#6b7280" }}
-          >
-            <Monitor size={16} />
-            Devices
-          </a>
-          <a
-            href="#"
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm"
-            style={{ color: "#6b7280" }}
-          >
-            <Settings size={16} />
-            Settings
-          </a>
-        </nav>
+      {/* ===== Hero ===== */}
+      <section className="relative overflow-hidden">
+        {/* Gradient orbs */}
+        <div className="absolute top-[-200px] left-1/4 w-[600px] h-[500px] opacity-15 pointer-events-none" style={{ background: "radial-gradient(ellipse at center, #3b82f6 0%, transparent 70%)" }} />
+        <div className="absolute top-[-100px] right-[10%] w-[400px] h-[400px] opacity-10 pointer-events-none" style={{ background: "radial-gradient(ellipse at center, #8b5cf6 0%, transparent 70%)" }} />
 
-        {/* Bottom */}
-        <div className="px-3 py-4 border-t" style={{ borderColor: "#eaedf3" }}>
-          <div className="flex items-center gap-2.5 px-3 py-2">
-            <div
-              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
-              style={{ background: "#4f6ef7" }}
-            >
-              A
-            </div>
-            <span className="text-xs flex-1" style={{ color: "#6b7280" }}>Admin</span>
-            {adminRequired && (
-              <button
-                onClick={handleAdminLogout}
-                className="p-1 rounded hover:bg-gray-100"
-                title="Logout"
-                style={{ color: "#9ca3af" }}
-              >
-                <LogOut size={14} />
-              </button>
-            )}
-          </div>
-        </div>
-      </aside>
-
-      {/* ===== Main ===== */}
-      <main className="flex-1 h-full overflow-y-auto">
-        {/* Top bar */}
-        <header
-          className="sticky top-0 z-10 h-16 flex items-center justify-between px-8 border-b"
-          style={{ background: "rgba(255,255,255,0.85)", borderColor: "#e5e7eb", backdropFilter: "blur(8px)" }}
-        >
-          <div />
-          <div className="flex items-center gap-4">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
-              style={{ background: "#4f6ef7" }}
-            >
-              A
-            </div>
-            <span className="text-sm font-medium" style={{ color: "#23233b" }}>Admin</span>
-          </div>
-        </header>
-
-        <div className="px-8 py-6">
-          {/* ===== Hero Banner ===== */}
-          <div
-            className="rounded-2xl p-8 mb-8 flex items-center justify-between"
-            style={{ background: "#fff", border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
-          >
-            {/* Left: greeting + connect */}
-            <div>
-              <p className="text-sm mb-0.5" style={{ color: "#9ca3af" }}>
-                {dateStr} &nbsp; <strong style={{ color: "#23233b" }}>{timeStr}</strong>
-              </p>
-              <h1 className="text-2xl font-bold mb-1" style={{ color: "#23233b" }}>
-                {greeting}
-              </h1>
-              <p className="text-sm mb-5" style={{ color: "#9ca3af" }}>
-                What would you like to do today?
-              </p>
-
-              {/* Quick connect inline */}
-              <form onSubmit={handleConnect} className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={machineId}
-                  onChange={(e) => setMid(formatMachineId(e.target.value))}
-                  placeholder="Enter machine ID"
-                  className="px-4 py-2.5 rounded-lg text-sm outline-none w-[200px] font-mono tracking-wider"
-                  style={{ background: "#fff", border: "1px solid #e0e3eb", color: "#23233b" }}
-                  onFocus={(e) => (e.target.style.borderColor = "#4f6ef7")}
-                  onBlur={(e) => (e.target.style.borderColor = "#e0e3eb")}
-                />
-                <input
-                  id="password-input"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
-                  className="px-4 py-2.5 rounded-lg text-sm outline-none w-[160px]"
-                  style={{ background: "#fff", border: "1px solid #e0e3eb", color: "#23233b" }}
-                  onFocus={(e) => (e.target.style.borderColor = "#4f6ef7")}
-                  onBlur={(e) => (e.target.style.borderColor = "#e0e3eb")}
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center gap-1.5 disabled:opacity-50"
-                  style={{ background: "#4f6ef7" }}
-                >
-                  {loading ? "Connecting..." : "Connect"}
-                  {!loading && <ArrowRight size={14} />}
-                </button>
-              </form>
-              {error && (
-                <p className="text-xs mt-2" style={{ color: "#ef4444" }}>{error}</p>
-              )}
-            </div>
-
-            {/* Right: stat cards */}
-            <div className="grid grid-cols-2 gap-3">
-              <div
-                className="rounded-2xl px-5 py-4 text-center"
-                style={{ border: "1px solid #e5e7eb", background: "#fff" }}
-              >
-                <div className="flex items-center justify-center gap-1.5 text-[11px] font-semibold mb-1.5" style={{ color: "#ef4444" }}>
-                  <Zap size={12} />
-                  Live
-                </div>
-                <div className="text-3xl font-bold" style={{ color: "#4f6ef7" }}>
-                  {agents.length}
-                </div>
+        <div className="relative max-w-6xl mx-auto px-6 py-16 sm:py-20">
+          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+            {/* Left: content + form */}
+            <div className="flex-1 lg:max-w-[480px]">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-6" style={{ background: "rgba(59,130,246,0.1)", color: "#60a5fa", border: "1px solid rgba(59,130,246,0.2)" }}>
+                <Zap size={12} />
+                Secure remote development from anywhere
               </div>
-              <div
-                className="rounded-2xl px-5 py-4 text-center"
-                style={{ border: "1px solid #e5e7eb", background: "#fff" }}
-              >
-                <div className="flex items-center justify-center gap-1.5 text-[11px] font-semibold mb-1.5" style={{ color: "#6b7280" }}>
-                  <Users size={12} />
-                  Total
-                </div>
-                <div className="text-3xl font-bold" style={{ color: "#23233b" }}>
-                  {recent.length}
-                </div>
-              </div>
-              <div
-                className="rounded-2xl px-5 py-4 text-center"
-                style={{ border: "1px solid #e5e7eb", background: "#fff" }}
-              >
-                <div className="flex items-center justify-center gap-1.5 text-[11px] font-semibold mb-1.5" style={{ color: "#10b981" }}>
-                  <Clock size={12} />
-                  Uptime
-                </div>
-                <div className="text-3xl font-bold" style={{ color: "#23233b" }}>
-                  --
-                </div>
-              </div>
-              <div
-                className="rounded-2xl px-5 py-4 text-center"
-                style={{ border: "1px solid #e5e7eb", background: "#fff" }}
-              >
-                <div className="flex items-center justify-center gap-1.5 text-[11px] font-semibold mb-1.5" style={{ color: "#f59e0b" }}>
-                  <Terminal size={12} />
-                  Sessions
-                </div>
-                <div className="text-3xl font-bold" style={{ color: "#23233b" }}>
-                  {totalSessions}
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* ===== Bottom panels ===== */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            {/* Online Devices (left, wider) */}
-            <div
-              className="lg:col-span-2 rounded-2xl border"
-              style={{ background: "#fff", borderColor: "#eaedf3" }}
-            >
-              <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "#eaedf3" }}>
-                <h2 className=" font-bold" style={{ color: "#23233b" }}>
-                  Online Devices
-                </h2>
-                <span
-                  className="px-2 py-0.5 rounded-full text-[11px] font-semibold"
-                  style={{ background: "#ecfdf5", color: "#059669" }}
-                >
-                  {agents.length} online
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight leading-[1.1] mb-4">
+                Vibecode{" "}
+                <span style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                  everywhere
                 </span>
-              </div>
+              </h1>
 
-              <div className="p-4">
-                {agents.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Monitor size={36} className="mx-auto mb-3" style={{ color: "#d1d5db" }} />
-                    <p className="text-sm" style={{ color: "#9ca3af" }}>No devices online</p>
-                    <p className="text-xs mt-1" style={{ color: "#d1d5db" }}>
-                      Start an agent to see it here
-                    </p>
+              <p className="text-sm sm:text-base mb-8" style={{ color: "#a1a1aa", lineHeight: 1.7 }}>
+                Connect to your remote machine with a 9-digit code. Full VS Code experience with terminal, file explorer, git, and port forwarding.
+              </p>
+
+              {/* Connect Form */}
+              <div id="connect">
+                <form onSubmit={handleConnect} className="space-y-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="text"
+                      value={machineId}
+                      onChange={(e) => setMid(formatMachineId(e.target.value))}
+                      placeholder="000-000-000"
+                      className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none font-mono tracking-widest text-center sm:text-left"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fafafa" }}
+                      onFocus={(e) => (e.target.style.borderColor = "rgba(59,130,246,0.5)")}
+                      onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
+                    />
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Password"
+                      className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fafafa" }}
+                      onFocus={(e) => (e.target.style.borderColor = "rgba(59,130,246,0.5)")}
+                      onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
+                    />
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    {agents.map((agent) => (
-                      <button
-                        key={agent.machineId}
-                        onClick={() => handleQuickConnect(agent.machineId)}
-                        className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors"
-                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f9fafb")}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                      >
-                        <div
-                          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                          style={{ background: "#eef1fb" }}
-                        >
-                          <Monitor size={16} style={{ color: "#4f6ef7" }} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-mono text-sm font-semibold" style={{ color: "#23233b" }}>
-                            {formatMachineId(agent.machineId)}
-                          </div>
-                          <div className="text-xs flex items-center gap-2" style={{ color: "#9ca3af" }}>
-                            <Clock size={10} />
-                            Connected
-                            {agent.browserCount > 0 && (
-                              <span style={{ color: "#f59e0b" }}>
-                                · {agent.browserCount} session{agent.browserCount > 1 ? "s" : ""}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: "#10b981" }} />
-                      </button>
-                    ))}
-                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-2.5 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                    style={{ background: "linear-gradient(135deg, #3b82f6, #7c3aed)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                  >
+                    {loading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        Connect
+                        <ArrowRight size={16} />
+                      </>
+                    )}
+                  </button>
+                </form>
+                {error && (
+                  <p className="text-xs mt-3" style={{ color: "#f87171" }}>{error}</p>
                 )}
               </div>
             </div>
 
-            {/* Recent Connections (right, table style) */}
-            <div
-              className="lg:col-span-3 rounded-2xl border"
-              style={{ background: "#fff", borderColor: "#eaedf3" }}
-            >
-              <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "#eaedf3" }}>
-                <h2 className="font-bold" style={{ color: "#23233b" }}>
-                  Recent Connections
-                </h2>
-                <span
-                  className="px-2 py-0.5 rounded-full text-[11px] font-semibold"
-                  style={{ background: "#eef1fb", color: "#4f6ef7" }}
-                >
-                  {recent.length} Total
-                </span>
-              </div>
-
-              {recent.length === 0 ? (
-                <div className="text-center py-12">
-                  <Clock size={36} className="mx-auto mb-3" style={{ color: "#d1d5db" }} />
-                  <p className="text-sm" style={{ color: "#9ca3af" }}>No recent connections</p>
-                  <p className="text-xs mt-1" style={{ color: "#d1d5db" }}>
-                    Your connection history will appear here
-                  </p>
+            {/* Right: Code mockup */}
+            <div className="flex-1 w-full lg:max-w-[560px]">
+              <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 25px 50px rgba(0,0,0,0.4)" }}>
+                {/* Title bar */}
+                <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "#18181b" }}>
+                  <div className="flex gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#f87171" }} />
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#facc15" }} />
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#4ade80" }} />
+                  </div>
+                  <span className="flex-1 text-center text-[11px]" style={{ color: "#52525b" }}>VS Code Remote — 192.168.1.42</span>
                 </div>
-              ) : (
-                <>
-                  {/* Table header */}
-                  <div
-                    className="grid px-6 py-2.5 text-[11px] font-semibold uppercase tracking-wider"
-                    style={{ color: "#9ca3af", gridTemplateColumns: "1fr 100px 120px 50px" }}
-                  >
-                    <span>Device</span>
-                    <span>Status</span>
-                    <span>Date</span>
-                    <span />
+                {/* Editor mockup */}
+                <div className="flex" style={{ background: "#09090b", height: 240 }}>
+                  {/* Sidebar */}
+                  <div className="w-40 shrink-0 border-r py-2.5 hidden sm:block" style={{ borderColor: "rgba(255,255,255,0.06)", background: "#0c0c0f" }}>
+                    <div className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#52525b" }}>Explorer</div>
+                    {["src/", "  index.ts", "  server.ts", "  config.ts", "package.json", "tsconfig.json", ".env"].map((f, i) => (
+                      <div key={i} className="px-3 py-px text-[11px] font-mono" style={{ color: f.startsWith("  ") ? "#a1a1aa" : "#60a5fa" }}>
+                        {f}
+                      </div>
+                    ))}
                   </div>
-
-                  {/* Table rows */}
-                  <div className="max-h-[320px] overflow-y-auto">
-                    {recent.map((r) => {
-                      const isOnline = agents.some((a) => a.machineId === r.machineId);
-                      return (
-                        <div
-                          key={r.machineId}
-                          className="group grid items-center px-6 py-3 border-t transition-colors cursor-pointer"
-                          style={{
-                            borderColor: "#f3f4f6",
-                            gridTemplateColumns: "1fr 100px 120px 50px",
-                          }}
-                          onClick={() => handleQuickConnect(r.machineId)}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = "#f9fafb")}
-                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                        >
-                          {/* Device */}
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                              style={{ background: isOnline ? "#ecfdf5" : "#f3f4f6" }}
-                            >
-                              <Monitor
-                                size={14}
-                                style={{ color: isOnline ? "#10b981" : "#9ca3af" }}
-                              />
-                            </div>
-                            <span className="font-mono text-sm font-medium" style={{ color: "#23233b" }}>
-                              {formatMachineId(r.machineId)}
-                            </span>
-                          </div>
-
-                          {/* Status */}
-                          <div>
-                            {isOnline ? (
-                              <span
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium"
-                                style={{ background: "#ecfdf5", color: "#059669" }}
-                              >
-                                <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#10b981" }} />
-                                Online
-                              </span>
-                            ) : (
-                              <span
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium"
-                                style={{ background: "#f3f4f6", color: "#9ca3af" }}
-                              >
-                                Offline
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Date */}
-                          <span className="text-xs" style={{ color: "#9ca3af" }}>
-                            {formatDate(r.lastConnected)}
-                          </span>
-
-                          {/* Actions */}
-                          <div className="flex justify-end">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveRecent(r.machineId);
-                              }}
-                              className="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                              style={{ color: "#9ca3af" }}
-                              onMouseEnter={(e) => (e.currentTarget.style.background = "#f3f4f6")}
-                              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                              title="Remove"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  {/* Code area */}
+                  <div className="flex-1 p-3 font-mono text-[11px] leading-5 overflow-hidden" style={{ color: "#a1a1aa" }}>
+                    <div><span style={{ color: "#c084fc" }}>import</span> <span style={{ color: "#fbbf24" }}>express</span> <span style={{ color: "#c084fc" }}>from</span> <span style={{ color: "#86efac" }}>&apos;express&apos;</span></div>
+                    <div><span style={{ color: "#c084fc" }}>import</span> {"{"} <span style={{ color: "#fbbf24" }}>createServer</span> {"}"} <span style={{ color: "#c084fc" }}>from</span> <span style={{ color: "#86efac" }}>&apos;http&apos;</span></div>
+                    <div style={{ color: "#52525b" }}></div>
+                    <div><span style={{ color: "#c084fc" }}>const</span> <span style={{ color: "#60a5fa" }}>app</span> = <span style={{ color: "#fbbf24" }}>express</span>()</div>
+                    <div><span style={{ color: "#c084fc" }}>const</span> <span style={{ color: "#60a5fa" }}>server</span> = <span style={{ color: "#fbbf24" }}>createServer</span>(<span style={{ color: "#60a5fa" }}>app</span>)</div>
+                    <div style={{ color: "#52525b" }}></div>
+                    <div><span style={{ color: "#60a5fa" }}>server</span>.<span style={{ color: "#fbbf24" }}>listen</span>(<span style={{ color: "#f472b6" }}>3000</span>, () =&gt; {"{"}</div>
+                    <div>  <span style={{ color: "#60a5fa" }}>console</span>.<span style={{ color: "#fbbf24" }}>log</span>(<span style={{ color: "#86efac" }}>&apos;Server running&apos;</span>)</div>
+                    <div>{"}"})</div>
                   </div>
-                </>
-              )}
+                </div>
+                {/* Terminal */}
+                <div className="border-t px-3 py-2 font-mono text-[11px]" style={{ background: "#0c0c0f", borderColor: "rgba(255,255,255,0.06)" }}>
+                  <div style={{ color: "#4ade80" }}>$ npm run dev</div>
+                  <div style={{ color: "#a1a1aa" }}>Server running on http://localhost:3000</div>
+                  <div className="flex items-center gap-1" style={{ color: "#4ade80" }}>$ <span className="w-1.5 h-3 inline-block animate-pulse" style={{ background: "#4ade80" }} /></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </main>
+      </section>
+
+      {/* ===== Quick Start ===== */}
+      <section className="border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        <div className="max-w-6xl mx-auto px-6 py-10 sm:py-14">
+          <div className="text-center mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight mb-2">
+              Quick Start
+            </h2>
+            <p className="text-sm max-w-lg mx-auto" style={{ color: "#71717a" }}>
+              Install the agent on your machine and start coding remotely in seconds.
+            </p>
+          </div>
+
+          <div className="max-w-2xl mx-auto">
+            {/* Terminal mockup */}
+            <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 25px 50px rgba(0,0,0,0.3)" }}>
+              {/* Tab bar */}
+              <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "#18181b" }}>
+                <div className="flex gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#f87171" }} />
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#facc15" }} />
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#4ade80" }} />
+                </div>
+                <div className="flex-1 flex justify-center gap-4">
+                  {["npm", "pnpm"].map((tab) => (
+                    <span key={tab} className="text-[11px] px-3 py-0.5 rounded-md cursor-default" style={{ background: tab === "npm" ? "rgba(59,130,246,0.15)" : "transparent", color: tab === "npm" ? "#60a5fa" : "#52525b" }}>
+                      {tab}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Terminal content */}
+              <div className="px-5 py-5 font-mono text-[13px] leading-7 space-y-1" style={{ background: "#09090b" }}>
+                <div style={{ color: "#52525b" }}># Install the agent</div>
+                <div className="flex items-center gap-2">
+                  <span style={{ color: "#52525b" }}>$</span>
+                  <span style={{ color: "#4ade80" }}>npm i -g opencode-agent</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText("npm i -g opencode-agent");
+                    }}
+                    className="ml-auto p-1 rounded opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity"
+                    style={{ color: "#52525b" }}
+                    title="Copy"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                  </button>
+                </div>
+                <div className="pt-2" style={{ color: "#52525b" }}># Start the agent</div>
+                <div className="flex items-center gap-2">
+                  <span style={{ color: "#52525b" }}>$</span>
+                  <span style={{ color: "#4ade80" }}>opencode start</span>
+                </div>
+                <div className="pt-2" style={{ color: "#a1a1aa" }}>
+                  <span style={{ color: "#52525b" }}>  Machine ID :</span> <span style={{ color: "#60a5fa" }}>940-195-819</span>
+                </div>
+                <div style={{ color: "#a1a1aa" }}>
+                  <span style={{ color: "#52525b" }}>  Password   :</span> <span style={{ color: "#fbbf24" }}>aB3xK9mQ</span>
+                </div>
+                <div style={{ color: "#a1a1aa" }}>
+                  <span style={{ color: "#52525b" }}>  Admin UI   :</span> <span style={{ color: "#a1a1aa" }}>http://localhost:9000</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Platform support */}
+            <p className="text-center text-xs mt-4" style={{ color: "#52525b" }}>
+              Works on macOS, Windows, and Linux. Requires Node.js 20+.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Features ===== */}
+      <section id="features" className="relative border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        <div className="max-w-6xl mx-auto px-6 py-20 sm:py-28">
+          <div className="text-center mb-16">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-4">
+              Everything you need to code remotely
+            </h2>
+            <p className="text-sm sm:text-base max-w-lg mx-auto" style={{ color: "#71717a" }}>
+              A complete remote development environment with the tools you already know and love.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {features.map((feature) => (
+              <div
+                key={feature.title}
+                className="group rounded-2xl p-6 transition-colors"
+                style={{ border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(59,130,246,0.2)")}
+                onMouseLeave={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.06)")}
+              >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: "rgba(59,130,246,0.1)" }}>
+                  <feature.icon size={20} style={{ color: "#60a5fa" }} />
+                </div>
+                <h3 className="text-sm font-semibold mb-2">{feature.title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: "#71717a" }}>{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== How it works ===== */}
+      <section className="border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        <div className="max-w-6xl mx-auto px-6 py-20 sm:py-28">
+          <div className="text-center mb-16">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-4">
+              Get started in seconds
+            </h2>
+            <p className="text-sm sm:text-base max-w-lg mx-auto" style={{ color: "#71717a" }}>
+              Three simple steps to access your remote workspace.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-3xl mx-auto">
+            {[
+              { step: "01", icon: Monitor, title: "Run the agent", desc: "Start the agent on your remote machine to get a 9-digit Machine ID." },
+              { step: "02", icon: Globe, title: "Open browser", desc: "Visit this page from any device and enter your Machine ID and password." },
+              { step: "03", icon: Code2, title: "Start coding", desc: "Get a full VS Code experience with terminal, files, git and more." },
+            ].map((item) => (
+              <div key={item.step} className="text-center">
+                <div className="text-xs font-mono font-bold mb-4" style={{ color: "#3b82f6" }}>{item.step}</div>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <item.icon size={22} style={{ color: "#a1a1aa" }} />
+                </div>
+                <h3 className="text-sm font-semibold mb-2">{item.title}</h3>
+                <p className="text-xs leading-relaxed" style={{ color: "#71717a" }}>{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Footer ===== */}
+      <footer className="border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)" }}>
+              <Code2 size={12} className="text-white" />
+            </div>
+            <span className="text-xs font-medium" style={{ color: "#52525b" }}>VS Code Remote</span>
+          </div>
+          <p className="text-xs" style={{ color: "#3f3f46" }}>
+            Secure remote development environment
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

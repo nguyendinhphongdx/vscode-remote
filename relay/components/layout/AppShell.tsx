@@ -18,6 +18,7 @@ import { useTerminalStore } from "@/store/terminalStore";
 import { useGitStore } from "@/store/gitStore";
 import { useWebSocket } from "@/components/providers/WebSocketProvider";
 import { PortsPanel } from "@/components/ports/PortsPanel";
+import { PortPreview } from "@/components/ports/PortPreview";
 import { Files, Terminal, GitBranch, Radio } from "lucide-react";
 
 export function AppShell() {
@@ -29,6 +30,8 @@ export function AppShell() {
   const [terminalMaximized, setTerminalMaximized] = useState(false);
   const [terminalPosition, setTerminalPosition] = useState<TerminalPosition>("bottom");
   const [folderPickerOpen, setFolderPickerOpen] = useState(false);
+  const [portPreview, setPortPreview] = useState<{ port: number; url: string } | null>(null);
+  const [previewWidth, setPreviewWidth] = useState(500);
 
   const { tabs, activeTab, activeTabId, updateContent, saveFile, setActiveTab, openFile, resolveFilePath } =
     useEditor();
@@ -49,6 +52,10 @@ export function AppShell() {
     const id = await createTerminal(80, 24);
     if (id) setShowTerminal(true);
   }, [createTerminal]);
+
+  const handlePortPreview = useCallback((port: number, url: string) => {
+    setPortPreview({ port, url });
+  }, []);
 
   const handleTogglePosition = useCallback(() => {
     setTerminalPosition((p) => (p === "bottom" ? "right" : "bottom"));
@@ -187,7 +194,7 @@ export function AppShell() {
             >
               {activeSidebar === "explorer" && <FileExplorer onOpenFolder={handleOpenFolder} />}
               {activeSidebar === "scm" && <SourceControl />}
-              {activeSidebar === "ports" && <PortsPanel />}
+              {activeSidebar === "ports" && <PortsPanel onPreview={handlePortPreview} />}
             </div>
             <ResizeHandle
               direction="horizontal"
@@ -202,26 +209,48 @@ export function AppShell() {
         <div className={`flex-1 flex overflow-hidden ${
           terminalPosition === "right" ? "flex-row" : "flex-col"
         }`}>
-          {/* Editor */}
+          {/* Editor + Port Preview */}
           {!terminalMaximized && (
-            <div className="flex-1 flex flex-col overflow-hidden bg-editor">
-              <EditorTabs />
-              <div className="flex-1 overflow-hidden">
-                {activeTab ? (
-                  <MonacoEditor
-                    key={activeTab.id}
-                    content={activeTab.content}
-                    language={activeTab.language}
-                    path={activeTab.path}
-                    onChange={(value) => updateContent(activeTab.id, value)}
-                    onSave={() => saveFile(activeTab.id)}
-                    onOpenFile={(filePath) => openFile(filePath)}
-                    resolveFilePath={resolveFilePath}
-                  />
-                ) : (
-                  <WelcomeTab onOpenFolder={handleOpenFolder} />
-                )}
+            <div className="flex-1 flex flex-row overflow-hidden">
+              {/* Editor */}
+              <div className="flex-1 flex flex-col overflow-hidden bg-editor">
+                <EditorTabs />
+                <div className="flex-1 overflow-hidden">
+                  {activeTab ? (
+                    <MonacoEditor
+                      key={activeTab.id}
+                      content={activeTab.content}
+                      language={activeTab.language}
+                      path={activeTab.path}
+                      onChange={(value) => updateContent(activeTab.id, value)}
+                      onSave={() => saveFile(activeTab.id)}
+                      onOpenFile={(filePath) => openFile(filePath)}
+                      resolveFilePath={resolveFilePath}
+                    />
+                  ) : (
+                    <WelcomeTab onOpenFolder={handleOpenFolder} />
+                  )}
+                </div>
               </div>
+
+              {/* Port Preview Split */}
+              {portPreview && (
+                <>
+                  <ResizeHandle
+                    direction="horizontal"
+                    onResize={(delta) =>
+                      setPreviewWidth((w) => Math.max(250, Math.min(900, w - delta)))
+                    }
+                  />
+                  <div className="shrink-0 overflow-hidden" style={{ width: previewWidth }}>
+                    <PortPreview
+                      port={portPreview.port}
+                      url={portPreview.url}
+                      onClose={() => setPortPreview(null)}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           )}
 

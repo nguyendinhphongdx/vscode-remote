@@ -250,43 +250,6 @@ function forwardLoginToAgent(
   });
 }
 
-// ============ Port Proxy Forwarding (HTTP-over-WS) ============
-
-function forwardPortProxy(
-  machineId: string,
-  portNum: number,
-  method: string,
-  path: string,
-  headers: Record<string, string>,
-  body?: string
-): Promise<{ success: boolean; payload?: unknown; error?: string }> {
-  return new Promise((resolve) => {
-    const agent = agents.get(machineId);
-    if (!agent) {
-      resolve({ success: false, error: "Agent offline" });
-      return;
-    }
-
-    const id = uuid();
-    const requestId = uuid();
-    const timeout = setTimeout(() => {
-      pendingHttpRequests.delete(id);
-      resolve({ success: false, error: "Port proxy timeout" });
-    }, 30000);
-
-    pendingHttpRequests.set(id, (response) => {
-      clearTimeout(timeout);
-      resolve(response as { success: boolean; payload?: unknown; error?: string });
-    });
-
-    agent.ws.send(JSON.stringify({
-      id,
-      type: "port:proxy",
-      payload: { requestId, port: portNum, method, path, headers, body },
-    }));
-  });
-}
-
 // ============ Token Verification via Agent ============
 
 function verifyTokenViaAgent(
@@ -429,44 +392,6 @@ app.prepare().then(() => {
       }));
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ agents: list }));
-      return;
-    }
-
-    // /port/:machineId/:port/* — port forwarding via WS
-    const portMatch = req.url?.match(/^\/port\/(\d{9})\/(\d+)(\/.*)?$/);
-    if (portMatch) {
-      const machineId = portMatch[1];
-      const portNum = parseInt(portMatch[2], 10);
-      const targetPath = portMatch[3] || "/";
-
-      const reqHeaders: Record<string, string> = {};
-      for (const [k, v] of Object.entries(req.headers)) {
-        if (v) reqHeaders[k] = Array.isArray(v) ? v.join(", ") : v;
-      }
-
-      let bodyBuf = "";
-      req.on("data", (chunk) => {
-        bodyBuf += Buffer.from(chunk).toString("base64");
-      });
-      req.on("end", async () => {
-        const result = await forwardPortProxy(
-          machineId, portNum, req.method || "GET", targetPath, reqHeaders,
-          bodyBuf || undefined
-        );
-
-        if (!result.success) {
-          res.writeHead(502, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: result.error }));
-          return;
-        }
-
-        const payload = result.payload as {
-          requestId: string; statusCode: number;
-          headers: Record<string, string>; body: string;
-        };
-        res.writeHead(payload.statusCode, payload.headers);
-        res.end(Buffer.from(payload.body, "base64"));
-      });
       return;
     }
 

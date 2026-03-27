@@ -213,24 +213,6 @@ export interface AgentRegisteredPayload {
   ok: boolean;
 }
 
-// ============ Port Proxy Types (HTTP-over-WS) ============
-
-export interface PortProxyPayload {
-  requestId: string;
-  port: number;
-  method: string;
-  path: string;
-  headers: Record<string, string>;
-  body?: string; // base64 encoded
-}
-
-export interface PortProxyResponse {
-  requestId: string;
-  statusCode: number;
-  headers: Record<string, string>;
-  body: string; // base64 encoded
-}
-
 // ============ Message Type Constants ============
 
 export const MSG = {
@@ -243,10 +225,6 @@ export const MSG = {
   AGENT_REGISTERED: 'agent:registered',
   BROWSER_CONNECTED: 'browser:connected',
   BROWSER_DISCONNECTED: 'browser:disconnected',
-
-  // Port Proxy (HTTP-over-WS)
-  PORT_PROXY: 'port:proxy',
-  PORT_PROXY_RESPONSE: 'port:proxy:response',
 
   // File System
   FS_LIST: 'fs:list',
