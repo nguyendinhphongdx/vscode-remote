@@ -113,7 +113,7 @@ export function MonacoEditor({
       const languages = ["typescript", "typescriptreact", "javascript", "javascriptreact"];
       for (const lang of languages) {
         monaco.languages.registerLinkProvider(lang, {
-          provideLinks: async (model) => {
+          provideLinks: async (model: editor.ITextModel) => {
             const links: { range: { startLineNumber: number; startColumn: number; endLineNumber: number; endColumn: number }; tooltip?: string; data?: string }[] = [];
             const lineCount = model.getLineCount();
 
@@ -151,7 +151,7 @@ export function MonacoEditor({
 
             return { links };
           },
-          resolveLink: (link) => {
+          resolveLink: (link: { range: { startLineNumber: number; startColumn: number; endLineNumber: number; endColumn: number }; url?: string; tooltip?: string; data?: unknown }) => {
             // Open the file when clicked
             const resolved = (link as { data?: string }).data;
             if (resolved) {
