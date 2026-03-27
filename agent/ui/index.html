@@ -54,7 +54,27 @@
     .btn:hover { background: #1177bb; }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .error { color: #f44747; font-size: 12px; margin-top: 8px; }
+    .success { color: #73c991; font-size: 12px; margin-top: 8px; }
     .workspace { font-size: 11px; color: #666; margin-top: 4px; word-break: break-all; }
+    .settings-toggle {
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; user-select: none;
+    }
+    .settings-toggle .arrow { transition: transform 0.2s; font-size: 10px; color: #666; }
+    .settings-toggle .arrow.open { transform: rotate(90deg); }
+    .settings-body { display: none; margin-top: 12px; }
+    .settings-body.open { display: block; }
+    .form-group input.setting-input {
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 12px; letter-spacing: 0.5px;
+    }
+    .btn-secondary {
+      width: 100%; padding: 8px; background: #3c3c3c; border: 1px solid #555;
+      border-radius: 4px; color: #ccc; font-size: 13px; cursor: pointer;
+    }
+    .btn-secondary:hover { background: #4a4a4a; }
+    .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .restart-note { font-size: 11px; color: #e2c08d; margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -93,6 +113,31 @@
       </div>
       <button class="btn" id="connectBtn" onclick="connectRemote()">Connect</button>
       <div class="error" id="error"></div>
+    </div>
+    <!-- Settings -->
+    <div class="card">
+      <div class="settings-toggle" onclick="toggleSettings()">
+        <h2 style="margin-bottom:0">Settings</h2>
+        <span class="arrow" id="settingsArrow">&#9654;</span>
+      </div>
+      <div class="settings-body" id="settingsBody">
+        <div class="form-group">
+          <label>Relay URL</label>
+          <input type="text" id="settingRelayUrl" class="setting-input" placeholder="ws://..." />
+        </div>
+        <div class="form-group">
+          <label>Agent Secret</label>
+          <input type="password" id="settingAgentSecret" class="setting-input" placeholder="Secret key" />
+        </div>
+        <div class="form-group">
+          <label>Workspace Root</label>
+          <input type="text" id="settingWorkspace" class="setting-input" placeholder="/path/to/workspace" />
+        </div>
+        <button class="btn-secondary" id="saveSettingsBtn" onclick="saveSettings()">Save Settings</button>
+        <div class="restart-note" id="restartNote" style="display:none">Settings saved. Restart agent to apply changes.</div>
+        <div class="error" id="settingsError"></div>
+        <div class="success" id="settingsSuccess" style="display:none"></div>
+      </div>
     </div>
   </div>
 
@@ -194,6 +239,64 @@
     document.getElementById('remotePassword').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') connectRemote();
     });
+
+    // ===== Settings =====
+    function toggleSettings() {
+      const body = document.getElementById('settingsBody');
+      const arrow = document.getElementById('settingsArrow');
+      const isOpen = body.classList.toggle('open');
+      arrow.classList.toggle('open', isOpen);
+      if (isOpen) fetchSettings();
+    }
+
+    async function fetchSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        const data = await res.json();
+        document.getElementById('settingRelayUrl').value = data.relayUrl || '';
+        document.getElementById('settingAgentSecret').value = data.agentSecret || '';
+        document.getElementById('settingWorkspace').value = data.workspaceRoot || '';
+      } catch {
+        // ignore
+      }
+    }
+
+    async function saveSettings() {
+      const relayUrl = document.getElementById('settingRelayUrl').value.trim();
+      const agentSecret = document.getElementById('settingAgentSecret').value.trim();
+      const workspaceRoot = document.getElementById('settingWorkspace').value.trim();
+      const errorEl = document.getElementById('settingsError');
+      const noteEl = document.getElementById('restartNote');
+      const successEl = document.getElementById('settingsSuccess');
+      errorEl.textContent = '';
+      noteEl.style.display = 'none';
+      successEl.style.display = 'none';
+
+      const btn = document.getElementById('saveSettingsBtn');
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ relayUrl, agentSecret, workspaceRoot }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          noteEl.style.display = 'block';
+          successEl.textContent = 'Settings saved successfully';
+          successEl.style.display = 'block';
+          setTimeout(() => { successEl.style.display = 'none'; }, 3000);
+        } else {
+          errorEl.textContent = data.error || 'Failed to save';
+        }
+      } catch {
+        errorEl.textContent = 'Failed to save settings';
+      } finally {
+        btn.disabled = false;
+      }
+    }
 
     // Poll status
     fetchStatus();

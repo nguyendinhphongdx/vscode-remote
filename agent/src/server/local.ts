@@ -46,6 +46,40 @@ export function createLocalServer(relayClient: RelayClient) {
     res.json({ editorUrl });
   });
 
+  // API: get settings
+  app.get('/api/settings', (_req, res) => {
+    const store = configStore.get();
+    res.json({
+      relayUrl: store.settings.relayUrl,
+      agentSecret: store.settings.agentSecret,
+      workspaceRoot: store.settings.workspaceRoot,
+      localPort: store.settings.localPort,
+    });
+  });
+
+  // API: update settings (requires restart for some changes)
+  app.put('/api/settings', async (req, res) => {
+    const { relayUrl, agentSecret, workspaceRoot } = req.body;
+    const updates: Record<string, unknown> = {};
+
+    if (relayUrl !== undefined) updates.relayUrl = relayUrl;
+    if (agentSecret !== undefined) updates.agentSecret = agentSecret;
+    if (workspaceRoot !== undefined) updates.workspaceRoot = workspaceRoot;
+
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({ error: 'No settings to update' });
+      return;
+    }
+
+    try {
+      await configStore.updateSettings(updates as Parameters<typeof configStore.updateSettings>[0]);
+      logger.info('Settings updated', updates);
+      res.json({ success: true, needsRestart: true });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
   const port = config.localPort;
   app.listen(port, '127.0.0.1', () => {
     logger.info(`Agent UI available at http://localhost:${port}`);
