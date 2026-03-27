@@ -294,6 +294,16 @@ function verifyTokenViaAgent(
 
 app.prepare().then(() => {
   const server = createServer(async (req, res) => {
+    // Request logging
+    const start = Date.now();
+    const { method, url } = req;
+    res.on("finish", () => {
+      const duration = Date.now() - start;
+      // Skip noisy Next.js internal requests
+      if (url?.startsWith("/_next/") || url?.startsWith("/__nextjs")) return;
+      console.log(`[relay] ${method} ${url} ${res.statusCode} ${duration}ms`);
+    });
+
     // CORS for agent UI cross-origin requests
     const origin = req.headers.origin;
     if (origin) {
