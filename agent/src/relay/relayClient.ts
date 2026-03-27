@@ -4,21 +4,20 @@ import { MSG, type WSMessage, type WSResponse } from '../protocol.js';
 import { routeMessage, sendEvent } from '../handlers/router.js';
 import { addSubscriber, removeSubscriber } from '../services/watcherService.js';
 import { logger } from '../utils/logger.js';
+import { AGENT_SECRET } from '../constants.js';
 
 export class RelayClient {
   private ws: WebSocket | null = null;
   private relayUrl: string;
   private machineId: string;
-  private secret: string;
   private reconnectDelay = 1000;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private shouldReconnect = true;
   private registered = false;
 
-  constructor(relayUrl: string, machineId: string, secret: string) {
+  constructor(relayUrl: string, machineId: string) {
     this.relayUrl = relayUrl;
     this.machineId = machineId;
-    this.secret = secret;
   }
 
   connect(): void {
@@ -37,7 +36,7 @@ export class RelayClient {
       const registerMsg: WSMessage = {
         id: uuid(),
         type: MSG.AGENT_REGISTER,
-        payload: { machineId: this.machineId, secret: this.secret },
+        payload: { machineId: this.machineId, secret: AGENT_SECRET },
       };
       this.ws!.send(JSON.stringify(registerMsg));
     });
@@ -111,6 +110,22 @@ export class RelayClient {
 
   isConnected(): boolean {
     return this.registered && this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  reconnect(newUrl?: string): void {
+    if (newUrl) this.relayUrl = newUrl;
+    this.shouldReconnect = true;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    if (this.ws) {
+      this.ws.close();
+      // onclose will trigger scheduleReconnect
+    } else {
+      this.reconnectDelay = 1000;
+      this.connect();
+    }
   }
 
   disconnect(): void {

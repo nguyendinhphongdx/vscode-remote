@@ -220,7 +220,7 @@
             <label>Password</label>
             <input type="password" id="remotePassword" placeholder="Enter password" />
           </div>
-          <button class="btn" id="connectBtn" onclick="connectRemote()">Connect</button>
+          <button class="btn" id="connectBtn" onclick="connectRemote()" disabled>Connect</button>
           <div class="error" id="error"></div>
         </div>
 
@@ -235,12 +235,8 @@
               <label>Relay URL</label>
               <input type="text" id="settingRelayUrl" class="setting-input" placeholder="ws://..." />
             </div>
-            <div class="form-group">
-              <label>Agent Secret</label>
-              <input type="password" id="settingAgentSecret" class="setting-input" placeholder="Secret key" />
-            </div>
             <button class="btn-secondary" id="saveSettingsBtn" onclick="saveSettings()">Save Settings</button>
-            <div class="restart-note" id="restartNote" style="display:none">Settings saved. Restart agent to apply changes.</div>
+            <div class="success" id="settingsSaved" style="display:none">Settings saved.</div>
             <div class="error" id="settingsError"></div>
             <div class="success" id="settingsSuccess" style="display:none"></div>
           </div>
@@ -478,16 +474,20 @@
         document.getElementById('password').textContent = data.password || '(fixed password set)';
         const dot = document.getElementById('statusDot');
         const text = document.getElementById('statusText');
+        const connectBtn = document.getElementById('connectBtn');
         if (data.relayConnected) {
           dot.className = 'status-dot online';
           text.textContent = 'Connected';
+          connectBtn.disabled = false;
         } else {
           dot.className = 'status-dot connecting';
           text.textContent = 'Connecting...';
+          connectBtn.disabled = true;
         }
       } catch {
         document.getElementById('statusDot').className = 'status-dot offline';
         document.getElementById('statusText').textContent = 'Error';
+        document.getElementById('connectBtn').disabled = true;
       }
     }
 
@@ -565,7 +565,6 @@
         const res = await fetch('/api/settings');
         const data = await res.json();
         document.getElementById('settingRelayUrl').value = data.relayUrl || '';
-        document.getElementById('settingAgentSecret').value = data.agentSecret || '';
       } catch {
         // ignore
       }
@@ -573,13 +572,10 @@
 
     async function saveSettings() {
       const relayUrl = document.getElementById('settingRelayUrl').value.trim();
-      const agentSecret = document.getElementById('settingAgentSecret').value.trim();
       const errorEl = document.getElementById('settingsError');
-      const noteEl = document.getElementById('restartNote');
-      const successEl = document.getElementById('settingsSuccess');
+      const savedEl = document.getElementById('settingsSaved');
       errorEl.textContent = '';
-      noteEl.style.display = 'none';
-      successEl.style.display = 'none';
+      savedEl.style.display = 'none';
 
       const btn = document.getElementById('saveSettingsBtn');
       btn.disabled = true;
@@ -588,14 +584,12 @@
         const res = await fetch('/api/settings', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ relayUrl, agentSecret }),
+          body: JSON.stringify({ relayUrl }),
         });
         const data = await res.json();
         if (data.success) {
-          noteEl.style.display = 'block';
-          successEl.textContent = 'Settings saved successfully';
-          successEl.style.display = 'block';
-          setTimeout(() => { successEl.style.display = 'none'; }, 3000);
+          savedEl.style.display = 'block';
+          setTimeout(() => { savedEl.style.display = 'none'; }, 3000);
         } else {
           errorEl.textContent = data.error || 'Failed to save';
         }

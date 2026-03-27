@@ -53,7 +53,6 @@ export function createLocalServer(relayClient: RelayClient) {
     const store = configStore.get();
     res.json({
       relayUrl: store.settings.relayUrl,
-      agentSecret: store.settings.agentSecret,
       workspaceRoot: store.settings.workspaceRoot,
       localPort: store.settings.localPort,
     });
@@ -61,11 +60,10 @@ export function createLocalServer(relayClient: RelayClient) {
 
   // API: update settings (requires restart for some changes)
   app.put('/api/settings', async (req, res) => {
-    const { relayUrl, agentSecret, workspaceRoot } = req.body;
+    const { relayUrl, workspaceRoot } = req.body;
     const updates: Record<string, unknown> = {};
 
     if (relayUrl !== undefined) updates.relayUrl = relayUrl;
-    if (agentSecret !== undefined) updates.agentSecret = agentSecret;
     if (workspaceRoot !== undefined) updates.workspaceRoot = workspaceRoot;
 
     if (Object.keys(updates).length === 0) {
@@ -76,7 +74,13 @@ export function createLocalServer(relayClient: RelayClient) {
     try {
       await configStore.updateSettings(updates as Parameters<typeof configStore.updateSettings>[0]);
       logger.info('Settings updated', updates);
-      res.json({ success: true, needsRestart: true });
+
+      // Auto-reconnect relay if URL changed
+      if (relayUrl !== undefined) {
+        relayClient.reconnect(relayUrl);
+      }
+
+      res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
     }

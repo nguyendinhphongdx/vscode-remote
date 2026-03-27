@@ -22,7 +22,7 @@ async function main() {
   logger.info('='.repeat(40));
 
   // Create relay client (outbound WS to relay server)
-  const relayClient = new RelayClient(config.relayUrl, store.machineId, config.agentSecret);
+  const relayClient = new RelayClient(config.relayUrl, store.machineId);
 
   // Forward file watch events to relay
   onFileChange((event) => relayClient.sendEvent(MSG.FS_WATCH_EVENT, event));

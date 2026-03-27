@@ -33,6 +33,7 @@ export class WebSocketClient {
     const separator = this.url.includes("?") ? "&" : "?";
     const wsUrl = `${this.url}${separator}token=${encodeURIComponent(this.token)}`;
     console.log("[ws] Connecting to:", wsUrl.substring(0, 50) + "...");
+    const connectStart = Date.now();
     this.ws = new WebSocket(wsUrl);
 
     this.ws.onopen = () => {
@@ -50,6 +51,12 @@ export class WebSocketClient {
       this.notifyStatus("disconnected");
       this.rejectAllPending();
       if (this.shouldReconnect) {
+        // If closed very quickly after opening, retry fast (likely agent was reconnecting)
+        const elapsed = Date.now() - connectStart;
+        if (elapsed < 3000) {
+          console.log("[ws] Connection closed quickly, retrying in 1s...");
+          this.reconnectDelay = 1000;
+        }
         this.scheduleReconnect();
       }
     };

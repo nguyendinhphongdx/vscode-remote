@@ -79,12 +79,23 @@ function cmdStart() {
   child.unref();
   fs.writeFileSync(PID_FILE, String(child.pid));
 
-  console.log(`Agent started (PID: ${child.pid})`);
-
-  // Wait a moment then show info
+  // Wait and verify the process is actually running
   setTimeout(() => {
-    showAgentInfo();
-  }, 1500);
+    if (!isRunning()) {
+      console.error('Agent failed to start. Check logs:');
+      // Show last few lines of log
+      try {
+        const log = fs.readFileSync(LOG_FILE, 'utf-8');
+        const lines = log.trim().split('\n').slice(-5);
+        lines.forEach((l) => console.error('  ' + l));
+      } catch { /* ignore */ }
+      cleanPid();
+      process.exit(1);
+    } else {
+      console.log(`Agent started (PID: ${child.pid})`);
+      showAgentInfo();
+    }
+  }, 2000);
 }
 
 function cmdStop() {

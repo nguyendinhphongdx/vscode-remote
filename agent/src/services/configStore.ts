@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import type { PersistedConfig, AgentSettings } from '../types/config.types.js';
 import { generateMachineId } from './machineId.js';
 import { generateRandomPassword, hashPassword } from './passwordService.js';
+import { DEFAULT_RELAY_URL } from '../constants.js';
 
 import os from 'os';
 const DATA_DIR = process.env.VSR_DATA_DIR || path.join(os.homedir(), '.opencode');
@@ -34,8 +35,7 @@ async function createDefaultConfig(): Promise<PersistedConfig> {
       fixed: null,
     },
     settings: {
-      relayUrl: process.env.RELAY_URL || 'ws://localhost:9001/api/agent-ws',
-      agentSecret: process.env.AGENT_SECRET || crypto.randomBytes(32).toString('hex'),
+      relayUrl: process.env.RELAY_URL || DEFAULT_RELAY_URL,
       localPort: parseInt(process.env.LOCAL_PORT || '9000', 10),
       workspaceRoot: process.env.WORKSPACE_ROOT ? path.resolve(process.env.WORKSPACE_ROOT) : null,
       maxTerminals: 5,
