@@ -31,6 +31,9 @@ export function startWatcher(): void {
   watcher.on('unlink', (p: string) => emit('unlink', p));
   watcher.on('addDir', (p: string) => emit('addDir', p));
   watcher.on('unlinkDir', (p: string) => emit('unlinkDir', p));
+  watcher.on('error', (err: Error) => {
+    logger.warn('File watcher error (skipped)', { error: err.message });
+  });
 
   logger.info('File watcher started', { root: config.workspaceRoot });
 }
