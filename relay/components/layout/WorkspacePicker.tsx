@@ -67,7 +67,7 @@ export function WorkspacePicker({ open, onClose }: Props) {
   }, [inputValue, open, browse]);
 
   // Filter entries based on last segment of input
-  const lastSlash = inputValue.lastIndexOf("/");
+  const lastSlash = Math.max(inputValue.lastIndexOf("/"), inputValue.lastIndexOf("\\"));
   const filterText = lastSlash >= 0 ? inputValue.slice(lastSlash + 1).toLowerCase() : inputValue.toLowerCase();
   const filteredEntries = filterText
     ? entries.filter((e) => e.name.toLowerCase().includes(filterText))
@@ -82,11 +82,10 @@ export function WorkspacePicker({ open, onClose }: Props) {
   }, [selectedIndex]);
 
   const selectEntry = async (entry: { name: string; path: string }) => {
-    // Navigate into directory
-    const newPath = entry.path.startsWith("/")
-      ? entry.path
-      : `${currentPath}/${entry.name}`;
-    setInputValue(newPath + "/");
+    // Use the absolute path from the agent, append / for browsing
+    const sep = entry.path.includes("\\") ? "\\" : "/";
+    const normalized = entry.path.endsWith(sep) ? entry.path : entry.path + sep;
+    setInputValue(normalized);
   };
 
   const confirmWorkspace = async (path?: string) => {
@@ -135,11 +134,11 @@ export function WorkspacePicker({ open, onClose }: Props) {
         onClose();
         break;
       case "Backspace":
-        // If input ends with /, go up one directory
-        if (inputValue.endsWith("/") && inputValue.length > 1) {
+        // If input ends with / or \, go up one directory
+        if ((inputValue.endsWith("/") || inputValue.endsWith("\\")) && inputValue.length > 1) {
           e.preventDefault();
           const trimmed = inputValue.slice(0, -1);
-          const parentSlash = trimmed.lastIndexOf("/");
+          const parentSlash = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
           if (parentSlash >= 0) {
             setInputValue(trimmed.slice(0, parentSlash + 1));
           }
