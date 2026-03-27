@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { setToken, setMachineId } from "@/lib/auth/auth";
 import {
@@ -40,6 +40,40 @@ function addRecent(machineId: string): void {
   }
 }
 
+const guideSteps = [
+  {
+    label: "Step 1",
+    title: "Agent Admin Panel",
+    desc: "After installing with npm i -g opencode-remote, run opencode start on your machine. The agent will start and display your unique 9-digit Machine ID and a random password. Open http://localhost:9000 in your browser to access the Admin Panel — here you can view your credentials, check relay connection status, configure the relay server URL, browse documentation, and manage your agent settings.",
+    img: "/agent.png",
+  },
+  {
+    label: "Step 2",
+    title: "Open a Workspace",
+    desc: "Head to the relay website and enter your Machine ID and password to connect. Once authenticated, you'll see a workspace picker that lets you navigate your remote file system. Browse through directories, use Tab to enter folders, and press Ctrl+Enter to open a folder as your workspace. The workspace you choose becomes the root of your project in the editor.",
+    img: "/workspae.png",
+  },
+  {
+    label: "Step 3",
+    title: "Code in Your Browser",
+    desc: "Once a workspace is opened, you get a full VS Code-like editing experience right in your browser. The file explorer on the left lets you browse, create, rename, and delete files. The editor supports syntax highlighting for all major languages. Open the integrated terminal with Ctrl+` to run commands directly on your remote machine. Use the source control panel to stage, commit, and diff changes with git — all without leaving the browser.",
+    img: "/editor.png",
+  },
+  {
+    label: "Step 4",
+    title: "Forward Ports",
+    desc: "When you run a dev server or any service on your remote machine, the Ports panel automatically detects all listening ports. Click the play button next to any port to create a Cloudflare Tunnel — this gives you a public HTTPS URL that you can share or open anywhere. You can preview the forwarded service directly inside the editor with a split view, copy the URL to clipboard, or open it in a new browser tab.",
+    img: "/forward-port.png",
+  },
+  {
+    label: "Mobile",
+    title: "Works on Mobile",
+    desc: "The entire editor is fully responsive and optimized for phones and tablets. You can code, browse files, use the terminal, and forward ports from any mobile device. Install it as a PWA (Progressive Web App) from your browser for a native app-like experience with an icon on your home screen, full-screen mode, and offline caching. Perfect for quick edits and monitoring on the go.",
+    img: "/mobile.jpg",
+    mobile: true,
+  },
+];
+
 const features = [
   {
     icon: Terminal,
@@ -72,6 +106,151 @@ const features = [
     description: "Responsive design optimized for tablets and phones. Install as PWA.",
   },
 ];
+
+function GuideSlider() {
+  const [active, setActive] = useState(0);
+  const [dir, setDir] = useState(1); // 1 = forward, -1 = back
+  const step = guideSteps[active];
+
+  const go = useCallback((index: number) => {
+    setDir(index > active ? 1 : -1);
+    setActive(index);
+  }, [active]);
+
+  const prev = () => go(active > 0 ? active - 1 : guideSteps.length - 1);
+  const next = () => go(active < guideSteps.length - 1 ? active + 1 : 0);
+
+  // Auto-play: advance every 5s, pause on hover
+  const [paused, setPaused] = useState(false);
+  useEffect(() => {
+    if (paused) return;
+    const timer = setInterval(() => {
+      setDir(1);
+      setActive((prev) => (prev < guideSteps.length - 1 ? prev + 1 : 0));
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [paused]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") prev();
+      if (e.key === "ArrowRight") next();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  return (
+    <section className="border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+      <div className="max-w-5xl mx-auto px-6 py-14 sm:py-20">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3">How to Use</h2>
+          <p className="text-sm sm:text-base max-w-lg mx-auto" style={{ color: "#71717a" }}>
+            A step-by-step guide to set up and use your remote workspace.
+          </p>
+        </div>
+
+        {/* Step tabs */}
+        <div className="flex justify-center gap-1.5 sm:gap-2 mb-8 flex-wrap">
+          {guideSteps.map((s, i) => (
+            <button
+              key={i}
+              onClick={() => go(i)}
+              className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+              style={{
+                background: active === i ? "rgba(59,130,246,0.15)" : "transparent",
+                color: active === i ? "#60a5fa" : "#52525b",
+                border: `1px solid ${active === i ? "rgba(59,130,246,0.3)" : "rgba(255,255,255,0.08)"}`,
+              }}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Card */}
+        <div className="relative" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+          {/* Prev / Next arrows */}
+          <button
+            onClick={prev}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 sm:-translate-x-6 z-10 w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.12)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#a1a1aa" }}><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <button
+            onClick={next}
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 sm:translate-x-6 z-10 w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.12)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#a1a1aa" }}><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+
+          {/* Animated card */}
+          <div className="overflow-hidden rounded-2xl" style={{ border: "1px solid rgba(59,130,246,0.15)", background: "rgba(255,255,255,0.02)" }}>
+            <div
+              key={active}
+              className="animate-slideIn"
+              style={{ animation: `slideIn${dir > 0 ? "Right" : "Left"} 0.3s ease-out` }}
+            >
+              {/* Image */}
+              <div className="flex justify-center overflow-hidden" style={{ background: "#0c0c0f" }}>
+                <img
+                  src={step.img}
+                  alt={step.title}
+                  className={step.mobile ? "h-[560px] w-auto object-contain py-6" : "w-full object-cover"}
+                  style={step.mobile ? {} : { maxHeight: 440 }}
+                  draggable={false}
+                />
+              </div>
+              {/* Caption */}
+              <div className="px-6 py-5 sm:px-8">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded" style={{ background: "rgba(59,130,246,0.12)", color: "#60a5fa" }}>{step.label}</span>
+                  <h3 className="text-base font-semibold">{step.title}</h3>
+                </div>
+                <p className="text-sm leading-relaxed" style={{ color: "#71717a" }}>{step.desc}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Progress dots */}
+        <div className="flex justify-center gap-1.5 mt-6">
+          {guideSteps.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => go(i)}
+              className="rounded-full transition-all duration-300"
+              style={{
+                width: active === i ? 24 : 6,
+                height: 6,
+                background: active === i ? "#3b82f6" : "rgba(255,255,255,0.12)",
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Slide animation keyframes */}
+        <style>{`
+          @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(40px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+          @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-40px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+        `}</style>
+      </div>
+    </section>
+  );
+}
 
 export default function LandingPage() {
   const [machineId, setMid] = useState("");
@@ -342,6 +521,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ===== How to Use — Horizontal Slider ===== */}
+      <GuideSlider />
 
       {/* ===== Features ===== */}
       <section id="features" className="relative border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>

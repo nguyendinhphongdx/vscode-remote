@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'VS Code Remote',
     short_name: 'VSRemote',
     description: 'Remote VS Code access from anywhere',
-    start_url: '/editor',
+    start_url: '/',
     display: 'standalone',
     background_color: '#1e1e1e',
     theme_color: '#1e1e1e',
