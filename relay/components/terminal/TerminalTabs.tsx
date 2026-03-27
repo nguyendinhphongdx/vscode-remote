@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTerminalStore } from "@/store/terminalStore";
 import { useTerminal } from "@/lib/hooks/useTerminal";
-import { Plus, X, Trash2, ChevronDown, Maximize2, Minimize2, TerminalSquare, PanelRight, PanelBottom } from "lucide-react";
+import { Plus, X, Trash2, ChevronDown, Maximize2, Minimize2, TerminalSquare, PanelRight, PanelBottom, Ellipsis } from "lucide-react";
 import { VoiceMicButton } from "./VoiceMicButton";
 import type { ShellInfo } from "@vscode-remote/shared";
 
@@ -23,7 +23,9 @@ export function TerminalTabs({ onCreateTerminal, onToggle, isMaximized, onToggle
   const { closeTerminal, setActiveSession, fetchShells } = useTerminal();
   const [shells, setShells] = useState<ShellInfo[]>([]);
   const [showShellMenu, setShowShellMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const shellMenuRef = useRef<HTMLDivElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
 
   // Fetch available shells once
   useEffect(() => {
@@ -32,17 +34,20 @@ export function TerminalTabs({ onCreateTerminal, onToggle, isMaximized, onToggle
     });
   }, [fetchShells]);
 
-  // Close menu on outside click
+  // Close menus on outside click
   useEffect(() => {
-    if (!showShellMenu) return;
+    if (!showShellMenu && !showMoreMenu) return;
     const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (showShellMenu && shellMenuRef.current && !shellMenuRef.current.contains(e.target as Node)) {
         setShowShellMenu(false);
+      }
+      if (showMoreMenu && moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setShowMoreMenu(false);
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [showShellMenu]);
+  }, [showShellMenu, showMoreMenu]);
 
   const handleShellSelect = useCallback((shell: string) => {
     setShowShellMenu(false);
@@ -51,13 +56,14 @@ export function TerminalTabs({ onCreateTerminal, onToggle, isMaximized, onToggle
 
   return (
     <div className="flex items-center h-[35px] bg-bg-secondary border-b border-border shrink-0 select-none">
-      {/* Left: Panel label + actions */}
+      {/* Left: Panel label + primary actions */}
       <div className="flex items-center h-full shrink-0">
         <div className="flex items-center h-full px-3 text-[11px] uppercase tracking-wider font-semibold text-text-primary border-b border-text-primary">
           Terminal
         </div>
         <div className="flex items-center gap-0.5 ml-1">
-          <div className="relative" ref={menuRef}>
+          {/* New Terminal + shell dropdown */}
+          <div className="relative" ref={shellMenuRef}>
             <div className="flex items-center">
               <button
                 onClick={() => onCreateTerminal()}
@@ -68,7 +74,7 @@ export function TerminalTabs({ onCreateTerminal, onToggle, isMaximized, onToggle
               </button>
               {shells.length > 1 && (
                 <button
-                  onClick={() => setShowShellMenu((v) => !v)}
+                  onClick={() => { setShowShellMenu((v) => !v); setShowMoreMenu(false); }}
                   className="px-0.5 py-1 rounded-r hover:bg-bg-active text-text-secondary hover:text-text-primary border-l border-border"
                   title="Select Shell Type"
                 >
@@ -77,7 +83,7 @@ export function TerminalTabs({ onCreateTerminal, onToggle, isMaximized, onToggle
               )}
             </div>
             {showShellMenu && (
-              <div className="absolute top-full left-0 mt-1 bg-bg-secondary border border-border rounded shadow-lg z-50 min-w-[160px] py-1">
+              <div className="absolute top-full left-0 mt-1 bg-bg-secondary border border-border rounded shadow-lg z-50 min-w-40 py-1">
                 {shells.map((shell) => (
                   <button
                     key={shell.id}
@@ -90,45 +96,60 @@ export function TerminalTabs({ onCreateTerminal, onToggle, isMaximized, onToggle
               </div>
             )}
           </div>
+
+          {/* Kill Terminal */}
           {sessions.length > 0 && (
             <button
-              onClick={() => {
-                if (activeSessionId) closeTerminal(activeSessionId);
-              }}
+              onClick={() => { if (activeSessionId) closeTerminal(activeSessionId); }}
               className="p-1 rounded hover:bg-bg-active text-text-secondary hover:text-text-primary"
               title="Kill Terminal"
             >
               <Trash2 size={14} />
             </button>
           )}
-          <VoiceMicButton />
-          {onTogglePosition && (
+
+          {/* More actions (...) */}
+          <div className="relative" ref={moreMenuRef}>
             <button
-              onClick={onTogglePosition}
+              onClick={() => { setShowMoreMenu((v) => !v); setShowShellMenu(false); }}
               className="p-1 rounded hover:bg-bg-active text-text-secondary hover:text-text-primary"
-              title={position === "bottom" ? "Move Panel Right" : "Move Panel to Bottom"}
+              title="More Actions"
             >
-              {position === "bottom" ? <PanelRight size={14} /> : <PanelBottom size={14} />}
+              <Ellipsis size={14} />
             </button>
-          )}
-          {onToggleMaximize && (
-            <button
-              onClick={onToggleMaximize}
-              className="p-1 rounded hover:bg-bg-active text-text-secondary hover:text-text-primary"
-              title={isMaximized ? "Restore Panel" : "Maximize Panel"}
-            >
-              {isMaximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-            </button>
-          )}
-          {onToggle && (
-            <button
-              onClick={onToggle}
-              className="p-1 rounded hover:bg-bg-active text-text-secondary hover:text-text-primary"
-              title="Hide Panel"
-            >
-              <ChevronDown size={14} />
-            </button>
-          )}
+            {showMoreMenu && (
+              <div className="absolute top-full left-0 mt-1 bg-bg-secondary border border-border rounded shadow-lg z-50 min-w-44 py-1">
+                <VoiceMicButton asMenuItem />
+                {onTogglePosition && (
+                  <button
+                    onClick={() => { onTogglePosition(); setShowMoreMenu(false); }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-bg-active hover:text-text-primary"
+                  >
+                    {position === "bottom" ? <PanelRight size={13} /> : <PanelBottom size={13} />}
+                    {position === "bottom" ? "Move Panel Right" : "Move Panel to Bottom"}
+                  </button>
+                )}
+                {onToggleMaximize && (
+                  <button
+                    onClick={() => { onToggleMaximize(); setShowMoreMenu(false); }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-bg-active hover:text-text-primary"
+                  >
+                    {isMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                    {isMaximized ? "Restore Panel" : "Maximize Panel"}
+                  </button>
+                )}
+                {onToggle && (
+                  <button
+                    onClick={() => { onToggle(); setShowMoreMenu(false); }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-text-secondary hover:bg-bg-active hover:text-text-primary"
+                  >
+                    <ChevronDown size={13} />
+                    Hide Panel
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

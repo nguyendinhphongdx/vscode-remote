@@ -32,7 +32,11 @@ function getSpeechRecognition(): (new () => SpeechRecognitionInstance) | null {
   ) as (new () => SpeechRecognitionInstance) | null;
 }
 
-export function VoiceMicButton() {
+interface VoiceMicButtonProps {
+  asMenuItem?: boolean;
+}
+
+export function VoiceMicButton({ asMenuItem }: VoiceMicButtonProps = {}) {
   const [state, setState] = useState<MicState>("idle");
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const { sendInput } = useTerminal();
@@ -81,6 +85,25 @@ export function VoiceMicButton() {
   }, []);
 
   if (state === "unsupported" || !activeSessionId) return null;
+
+  if (asMenuItem) {
+    return (
+      <button
+        onPointerDown={(e) => { e.preventDefault(); startListening(); }}
+        onPointerUp={stopListening}
+        onPointerCancel={stopListening}
+        onContextMenu={(e) => e.preventDefault()}
+        className={`w-full flex items-center gap-2 px-3 py-1.5 text-[12px] touch-none select-none ${
+          state === "listening"
+            ? "bg-red-600/30 text-red-400 animate-pulse"
+            : "text-text-secondary hover:bg-bg-active hover:text-text-primary"
+        }`}
+      >
+        <Mic size={13} />
+        {state === "listening" ? "Listening..." : "Hold to Speak"}
+      </button>
+    );
+  }
 
   return (
     <button
