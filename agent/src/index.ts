@@ -1,3 +1,5 @@
+declare const __BUILD_RELAY_SECRET__: string;
+
 import { config, configStore } from './config.js';
 import { RelayClient } from './relay/relayClient.js';
 import { createLocalServer } from './server/local.js';
@@ -18,7 +20,8 @@ async function main() {
   const pw = configStore.getRandomPassword();
   logger.info(`  Password   : ${pw || '(none — use fixed password)'}`)
   logger.info(`  Relay      : ${config.relayUrl}`);
-  logger.info(`  Secret     : ${process.env.RELAY_SECRET ? '***configured***' : '⚠ NOT SET'}`);
+  const secret = process.env.RELAY_SECRET || __BUILD_RELAY_SECRET__;
+  logger.info(`  Secret     : ${secret ? '***configured***' : '⚠ NOT SET'}`);
   logger.info('='.repeat(40));
 
   // Create relay client (outbound WS to relay server)

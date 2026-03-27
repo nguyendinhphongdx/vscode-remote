@@ -1,13 +1,18 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs/promises';
+import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { config, configStore } from '../config.js';
 import type { RelayClient } from '../relay/relayClient.js';
 import { logger } from '../utils/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UI_DIR = path.resolve(__dirname, '../../ui');
+// dev (tsx): __dirname = src/server/ → ../../ui
+// prod (tsup bundle into dist/): __dirname = dist/ → ../ui
+const UI_DIR = existsSync(path.resolve(__dirname, '../../ui/index.html'))
+  ? path.resolve(__dirname, '../../ui')
+  : path.resolve(__dirname, '../ui');
 const DOCS_DIR = path.resolve(UI_DIR, 'docs');
 
 export function createLocalServer(relayClient: RelayClient) {

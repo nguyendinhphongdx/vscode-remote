@@ -10,7 +10,7 @@
     "build:relay:full": "npm run build:shared && npm run build:relay",
     "dev:agent": "npm run dev -w agent",
     "dev:relay": "npm run dev -w relay",
-    "publish:agent": "npm run build:shared && npm publish -w agent",
+    "publish:agent": "npm run build:shared && npm run build:agent && npm publish -w agent",
     "start": "npm run start -w relay"
   }
 }

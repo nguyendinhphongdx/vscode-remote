@@ -1,3 +1,5 @@
+declare const __BUILD_RELAY_SECRET__: string;
+
 import WebSocket from 'ws';
 import { v4 as uuid } from 'uuid';
 import { MSG, type WSMessage, type WSResponse } from '@vscode-remote/shared';
@@ -35,7 +37,7 @@ export class RelayClient {
       const registerMsg: WSMessage = {
         id: uuid(),
         type: MSG.AGENT_REGISTER,
-        payload: { machineId: this.machineId, secret: process.env.RELAY_SECRET || '' },
+        payload: { machineId: this.machineId, secret: process.env.RELAY_SECRET || __BUILD_RELAY_SECRET__ || '' },
       };
       this.ws!.send(JSON.stringify(registerMsg));
     });

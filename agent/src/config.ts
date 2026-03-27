@@ -1,9 +1,14 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import os from 'os';
 import { fileURLToPath } from 'url';
 
-// Load .env: try CWD first, then monorepo root (npm workspaces sets CWD to package dir)
+// Load .env in priority order (first found wins per key):
+// 1. CWD/.env (explicit override)
+// 2. ~/.opencode/.env (user config — recommended for global install)
+// 3. monorepo root/.env (dev mode)
 dotenv.config();
+dotenv.config({ path: path.join(os.homedir(), '.opencode', '.env') });
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 import * as configStore from './services/configStore.js';
