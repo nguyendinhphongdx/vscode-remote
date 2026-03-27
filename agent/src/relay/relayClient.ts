@@ -2,6 +2,7 @@ import WebSocket from 'ws';
 import { v4 as uuid } from 'uuid';
 import { MSG, type WSMessage, type WSResponse } from '../protocol.js';
 import { routeMessage, sendEvent } from '../handlers/router.js';
+import { addSubscriber, removeSubscriber } from '../services/watcherService.js';
 import { logger } from '../utils/logger.js';
 
 export class RelayClient {
@@ -44,7 +45,7 @@ export class RelayClient {
     this.ws.on('message', (data: WebSocket.Data) => {
       const raw = data.toString();
 
-      // Check for registration response
+      // Check for registration response or relay notifications
       try {
         const parsed = JSON.parse(raw);
         if (parsed.type === MSG.AGENT_REGISTERED) {
@@ -56,6 +57,16 @@ export class RelayClient {
             this.shouldReconnect = false;
             this.ws?.close();
           }
+          return;
+        }
+
+        // Browser connect/disconnect → manage file watcher lifecycle
+        if (parsed.type === MSG.BROWSER_CONNECTED) {
+          addSubscriber();
+          return;
+        }
+        if (parsed.type === MSG.BROWSER_DISCONNECTED) {
+          removeSubscriber();
           return;
         }
       } catch {

@@ -137,6 +137,9 @@ function handleBrowserConnection(ws: WebSocket, machineId: string) {
   browsers.set(ws, { ws, machineId });
   console.log(`[relay] Browser connected to agent ${machineId}`);
 
+  // Notify agent that a browser connected (for lazy file watcher)
+  agent.ws.send(JSON.stringify({ id: uuid(), type: "browser:connected", payload: {} }));
+
   ws.on("message", (data: RawData) => {
     const raw = data.toString();
     let msg: { id: string; type: string };
@@ -163,6 +166,12 @@ function handleBrowserConnection(ws: WebSocket, machineId: string) {
   ws.on("close", () => {
     browsers.delete(ws);
     console.log(`[relay] Browser disconnected from agent ${machineId}`);
+
+    // Notify agent that a browser disconnected
+    const agentConn = agents.get(machineId);
+    if (agentConn && agentConn.ws.readyState === WebSocket.OPEN) {
+      agentConn.ws.send(JSON.stringify({ id: uuid(), type: "browser:disconnected", payload: {} }));
+    }
   });
 
   ws.on("error", () => {

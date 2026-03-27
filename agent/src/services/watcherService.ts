@@ -8,13 +8,15 @@ type WatchCallback = (event: FsWatchEvent) => void;
 
 let watcher: FSWatcher | null = null;
 const callbacks = new Set<WatchCallback>();
+let subscriberCount = 0;
 
-export function startWatcher(): void {
+function startWatcher(): void {
   if (watcher) return;
 
   watcher = watch(config.workspaceRoot, {
     ignoreInitial: true,
     ignored: ['**/node_modules/**', '**/.git/**'],
+    ignorePermissionErrors: true,
     awaitWriteFinish: { stabilityThreshold: 100 },
   });
 
@@ -41,6 +43,22 @@ export function startWatcher(): void {
 export function onFileChange(callback: WatchCallback): () => void {
   callbacks.add(callback);
   return () => callbacks.delete(callback);
+}
+
+export function addSubscriber(): void {
+  subscriberCount++;
+  logger.info(`Watcher subscriber added (count: ${subscriberCount})`);
+  if (subscriberCount === 1) {
+    startWatcher();
+  }
+}
+
+export function removeSubscriber(): void {
+  subscriberCount = Math.max(0, subscriberCount - 1);
+  logger.info(`Watcher subscriber removed (count: ${subscriberCount})`);
+  if (subscriberCount === 0) {
+    stopWatcher();
+  }
 }
 
 export function stopWatcher(): void {

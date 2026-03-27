@@ -240,6 +240,8 @@ export const MSG = {
   // Relay
   AGENT_REGISTER: 'agent:register',
   AGENT_REGISTERED: 'agent:registered',
+  BROWSER_CONNECTED: 'browser:connected',
+  BROWSER_DISCONNECTED: 'browser:disconnected',
 
   // Port Proxy (HTTP-over-WS)
   PORT_PROXY: 'port:proxy',

@@ -1,7 +1,7 @@
 import { config, configStore } from './config.js';
 import { RelayClient } from './relay/relayClient.js';
 import { createLocalServer } from './server/local.js';
-import { startWatcher, stopWatcher, onFileChange } from './services/watcherService.js';
+import { stopWatcher, onFileChange } from './services/watcherService.js';
 import { closeAllTerminals } from './services/ptyService.js';
 import { MSG } from './protocol.js';
 import { logger } from './utils/logger.js';
@@ -20,9 +20,6 @@ async function main() {
   }
   logger.info(`  Relay      : ${config.relayUrl}`);
   logger.info('='.repeat(40));
-
-  // Start file watcher
-  startWatcher();
 
   // Create relay client (outbound WS to relay server)
   const relayClient = new RelayClient(config.relayUrl, store.machineId, config.agentSecret);
