@@ -19,10 +19,11 @@ export function usePorts() {
     }
   }, [ws, setPorts]);
 
-  const forwardPort = useCallback(async (port: number) => {
-    if (!ws) return;
+  const forwardPort = useCallback(async (port: number): Promise<string> => {
+    if (!ws) throw new Error("Not connected");
     const result = await ws.send<PortForwardResponse>(MSG.PORT_FORWARD, { port });
     addForwarded(port, result.tunnelUrl);
+    return result.tunnelUrl;
   }, [ws, addForwarded]);
 
   const unforwardPort = useCallback(async (port: number) => {

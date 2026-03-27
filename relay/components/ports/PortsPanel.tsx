@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { usePorts } from "@/lib/hooks/usePorts";
 import { usePortStore } from "@/store/portStore";
 import { useWebSocket } from "@/components/providers/WebSocketProvider";
-import { useAuth } from "@/components/providers/AuthProvider";
 import {
   RefreshCw,
   Globe,
@@ -14,15 +13,17 @@ import {
   Square,
   Copy,
   Check,
+  Loader2,
 } from "lucide-react";
 
 export function PortsPanel() {
   const { refreshPorts, forwardPort, unforwardPort } = usePorts();
-  const { ports, forwardedPorts } = usePortStore();
+  const { ports, forwardedPorts, tunnelUrls } = usePortStore();
   const { status } = useWebSocket();
-  const { machineId } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [forwarding, setForwarding] = useState<number | null>(null);
   const [copiedPort, setCopiedPort] = useState<number | null>(null);
+  const [error, setError] = useState<{ port: number; message: string } | null>(null);
 
   const doRefresh = useCallback(async () => {
     setLoading(true);
@@ -44,22 +45,34 @@ export function PortsPanel() {
     if (forwardedPorts.has(port)) {
       await unforwardPort(port);
     } else {
-      await forwardPort(port);
+      setForwarding(port);
+      setError(null);
+      try {
+        await forwardPort(port);
+      } catch (err) {
+        setError({ port, message: (err as Error).message });
+      } finally {
+        setForwarding(null);
+      }
     }
   };
 
-  const getProxyUrl = (port: number) => {
-    return `${window.location.origin}/port/${machineId}/${port}/`;
+  const getUrl = (port: number): string | null => {
+    return tunnelUrls.get(port) ?? null;
   };
 
   const handleCopyUrl = (port: number) => {
-    navigator.clipboard.writeText(getProxyUrl(port));
+    const url = getUrl(port);
+    if (!url) return;
+    navigator.clipboard.writeText(url);
     setCopiedPort(port);
     setTimeout(() => setCopiedPort(null), 2000);
   };
 
   const handleOpen = (port: number) => {
-    window.open(getProxyUrl(port), "_blank");
+    const url = getUrl(port);
+    if (!url) return;
+    window.open(url, "_blank");
   };
 
   return (
@@ -94,13 +107,15 @@ export function PortsPanel() {
         )}
         {ports.map((p) => {
           const isForwarded = forwardedPorts.has(p.port);
+          const isCreating = forwarding === p.port;
+          const tunnelUrl = tunnelUrls.get(p.port);
 
           return (
             <div
               key={p.port}
               className="group flex items-center h-[32px] px-3 hover:bg-[#2a2d2e] cursor-default"
             >
-              {/* Port number */}
+              {/* Port */}
               <span className="w-[60px] shrink-0 font-mono text-[12px] flex items-center gap-1.5">
                 {isForwarded ? (
                   <Globe size={12} className="text-[#73c991] shrink-0" />
@@ -112,13 +127,22 @@ export function PortsPanel() {
 
               {/* Address */}
               <span className="flex-1 text-[12px] truncate min-w-0">
-                {isForwarded ? (
+                {isCreating ? (
+                  <span className="flex items-center gap-1.5 text-text-muted">
+                    <Loader2 size={12} className="animate-spin" />
+                    Creating tunnel...
+                  </span>
+                ) : error?.port === p.port ? (
+                  <span className="text-[#f14c4c]" title={error.message}>
+                    Tunnel failed: {error.message}
+                  </span>
+                ) : isForwarded && tunnelUrl ? (
                   <span
                     className="text-[#4fc1ff] hover:underline cursor-pointer"
                     onClick={() => handleOpen(p.port)}
-                    title={getProxyUrl(p.port)}
+                    title={tunnelUrl}
                   >
-                    {getProxyUrl(p.port)}
+                    {tunnelUrl}
                   </span>
                 ) : (
                   <span className="text-text-muted">
@@ -175,7 +199,7 @@ export function PortsPanel() {
       {/* Summary */}
       {forwardedPorts.size > 0 && (
         <div className="px-3 py-1.5 border-t border-border text-[11px] text-text-muted">
-          {forwardedPorts.size} port{forwardedPorts.size > 1 ? "s" : ""} forwarded via relay
+          {forwardedPorts.size} port{forwardedPorts.size > 1 ? "s" : ""} forwarded
         </div>
       )}
     </div>

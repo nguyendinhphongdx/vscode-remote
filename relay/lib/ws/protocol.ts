@@ -55,7 +55,7 @@ export interface PortListResponse {
 
 export interface PortForwardResponse {
   port: number;
-  tunnelUrl: string | null;
+  tunnelUrl: string;
 }
 
 export type GitFileStatus = "M" | "A" | "D" | "R" | "U" | "?" | "!";

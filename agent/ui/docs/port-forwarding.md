@@ -1,0 +1,101 @@
+# Port Forwarding
+
+## Tổng quan
+
+Port Forwarding cho phép bạn truy cập các dịch vụ chạy trên máy remote từ bên ngoài. Khi bạn forward một port, agent sẽ tạo một **Cloudflare Tunnel** cung cấp URL public để truy cập dịch vụ.
+
+## Nguyên lý hoạt động
+
+```
+Internet ←→ Cloudflare Tunnel ←→ Agent ←→ localhost:<port>
+                                   ↑
+                         cloudflared process
+```
+
+1. Bạn click **Forward** trên một port trong panel Ports
+2. Agent spawn `cloudflared tunnel --url http://localhost:<port>`
+3. Cloudflared tạo một URL public dạng `https://xxx.trycloudflare.com`
+4. URL được hiển thị trong panel, bạn có thể click để mở hoặc copy
+
+## Yêu cầu
+
+### Cloudflared
+
+Agent sử dụng [cloudflared](https://github.com/cloudflare/cloudflared) để tạo tunnel. Agent sẽ **tự động cài đặt** cloudflared nếu chưa có:
+
+- Kiểm tra `cloudflared` trong PATH
+- Kiểm tra tại `~/.local/bin/cloudflared`
+- Nếu chưa có, tự động tải từ GitHub releases và lưu vào `~/.local/bin/`
+
+> **Lưu ý**: Tự động cài đặt chỉ hỗ trợ Linux (amd64/arm64). Trên macOS hoặc Windows, bạn cần cài đặt thủ công.
+
+### Cài đặt thủ công
+
+**macOS:**
+```bash
+brew install cloudflared
+```
+
+**Windows:**
+```powershell
+winget install Cloudflare.cloudflared
+```
+
+**Linux:**
+```bash
+# amd64
+curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o ~/.local/bin/cloudflared
+chmod +x ~/.local/bin/cloudflared
+
+# arm64
+curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 -o ~/.local/bin/cloudflared
+chmod +x ~/.local/bin/cloudflared
+```
+
+## Sử dụng
+
+### Forward một port
+
+1. Mở panel **Ports** trong editor (icon ở Activity Bar)
+2. Agent tự động phát hiện các port đang listen
+3. Click nút **Play** (▶) trên port muốn forward
+4. Đợi vài giây để cloudflared tạo tunnel
+5. URL sẽ hiển thị màu xanh — click để mở
+
+### Các thao tác
+
+| Thao tác | Mô tả |
+|----------|-------|
+| ▶ Forward | Tạo tunnel cho port |
+| ■ Stop | Đóng tunnel |
+| 📋 Copy URL | Sao chép URL tunnel |
+| 🔗 Open | Mở URL trong tab mới |
+
+### Lỗi thường gặp
+
+**"Tunnel failed: Failed to install cloudflared"**
+- Kiểm tra kết nối internet
+- Thử cài đặt cloudflared thủ công (xem hướng dẫn ở trên)
+
+**"Tunnel creation timed out after 30s"**
+- Mạng chậm hoặc firewall chặn kết nối tới Cloudflare
+- Thử lại sau vài giây
+
+**"cloudflared exited with code 1"**
+- Port không có dịch vụ nào đang listen
+- Kiểm tra dịch vụ của bạn đang chạy trên port đó
+
+## Phát hiện Port
+
+Agent phát hiện port tự động bằng các cách tuỳ theo OS:
+
+| OS | Lệnh | Thông tin |
+|----|-------|-----------|
+| Linux | `ss -tlnp` | Port, PID, tên process |
+| macOS | `lsof -iTCP -sTCP:LISTEN -nP` | Port, PID, tên process |
+| Windows | `netstat -ano` | Port, PID |
+| Fallback | TCP connect scan | Chỉ port number |
+
+**Port bị bỏ qua**: 22 (SSH), 53 (DNS), 631 (CUPS), 5353 (mDNS)
+
+**Port scan fallback**: Quét các dải port phổ biến: 3000-3019, 5000-5019, 8000-8019, 8080-8099, và một số port khác (4200, 4321, 9000, 9090...)

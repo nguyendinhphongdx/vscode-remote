@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { config, configStore } from '../config.js';
 import type { RelayClient } from '../relay/relayClient.js';
@@ -7,6 +8,7 @@ import { logger } from '../utils/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UI_DIR = path.resolve(__dirname, '../../ui');
+const DOCS_DIR = path.resolve(UI_DIR, 'docs');
 
 export function createLocalServer(relayClient: RelayClient) {
   const app = express();
@@ -77,6 +79,41 @@ export function createLocalServer(relayClient: RelayClient) {
       res.json({ success: true, needsRestart: true });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  // API: list docs
+  app.get('/api/docs', async (_req, res) => {
+    try {
+      const files = await fs.readdir(DOCS_DIR);
+      const docs = files
+        .filter((f) => f.endsWith('.md'))
+        .map((f) => {
+          const slug = f.replace('.md', '');
+          const title = slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+          return { slug, title, file: f };
+        })
+        .sort((a, b) => {
+          // Pin getting-started first, then alphabetical
+          if (a.slug === 'getting-started') return -1;
+          if (b.slug === 'getting-started') return 1;
+          return a.title.localeCompare(b.title);
+        });
+      res.json(docs);
+    } catch {
+      res.json([]);
+    }
+  });
+
+  // API: get single doc content (raw markdown)
+  app.get('/api/docs/:slug', async (req, res) => {
+    const slug = req.params.slug.replace(/[^a-z0-9-]/gi, '');
+    const filePath = path.join(DOCS_DIR, `${slug}.md`);
+    try {
+      const content = await fs.readFile(filePath, 'utf-8');
+      res.type('text/markdown').send(content);
+    } catch {
+      res.status(404).json({ error: 'Doc not found' });
     }
   });
 

@@ -4,10 +4,10 @@ import type { PortInfo } from "@/lib/ws/protocol";
 interface PortState {
   ports: PortInfo[];
   forwardedPorts: Set<number>;
-  tunnelUrls: Map<number, string | null>;
+  tunnelUrls: Map<number, string>;
 
   setPorts: (ports: PortInfo[], forwarded: number[], tunnelUrls: Record<number, string | null>) => void;
-  addForwarded: (port: number, tunnelUrl: string | null) => void;
+  addForwarded: (port: number, tunnelUrl: string) => void;
   removeForwarded: (port: number) => void;
 }
 
@@ -16,12 +16,13 @@ export const usePortStore = create<PortState>((set) => ({
   forwardedPorts: new Set(),
   tunnelUrls: new Map(),
 
-  setPorts: (ports, forwarded, tunnelUrls) =>
-    set({
-      ports,
-      forwardedPorts: new Set(forwarded),
-      tunnelUrls: new Map(Object.entries(tunnelUrls).map(([k, v]) => [Number(k), v])),
-    }),
+  setPorts: (ports, forwarded, tunnelUrls) => {
+    const urlMap = new Map<number, string>();
+    for (const [k, v] of Object.entries(tunnelUrls)) {
+      if (v) urlMap.set(Number(k), v);
+    }
+    set({ ports, forwardedPorts: new Set(forwarded), tunnelUrls: urlMap });
+  },
 
   addForwarded: (port, tunnelUrl) =>
     set((state) => {

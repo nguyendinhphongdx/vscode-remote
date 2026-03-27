@@ -9,10 +9,38 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #1e1e1e; color: #cccccc;
-      display: flex; justify-content: center; align-items: center;
-      min-height: 100vh;
+      display: flex; min-height: 100vh;
     }
-    .container { width: 420px; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 220px; background: #181818; border-right: 1px solid #333;
+      display: flex; flex-direction: column; shrink: 0;
+    }
+    .sidebar-logo {
+      padding: 16px 16px 12px; font-size: 14px; font-weight: 600;
+      color: #4fc1ff; border-bottom: 1px solid #333; letter-spacing: 0.5px;
+    }
+    .sidebar-nav { flex: 1; padding: 8px 0; overflow-y: auto; }
+    .nav-section { padding: 12px 16px 4px; font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 16px; font-size: 13px; color: #aaa;
+      cursor: pointer; text-decoration: none; transition: background 0.1s;
+    }
+    .nav-item:hover { background: #2a2a2a; color: #ccc; }
+    .nav-item.active { background: #37373d; color: #fff; border-left: 2px solid #4fc1ff; padding-left: 14px; }
+    .nav-icon { width: 16px; text-align: center; font-size: 14px; opacity: 0.7; }
+
+    /* Main content */
+    .main { flex: 1; overflow-y: auto; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* Home page */
+    .home-content {
+      max-width: 480px; margin: 0 auto; padding: 40px 24px;
+    }
     .card {
       background: #252526; border: 1px solid #3c3c3c; border-radius: 8px;
       padding: 24px; margin-bottom: 16px;
@@ -27,12 +55,8 @@
     .info-value { font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 15px; letter-spacing: 2px; }
     .info-value.id { color: #4fc1ff; font-size: 18px; font-weight: 600; }
     .info-value.password { color: #ce9178; }
-    .status {
-      display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
-    }
-    .status-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-    }
+    .status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; }
     .status-dot.online { background: #73c991; }
     .status-dot.offline { background: #c74e39; }
     .status-dot.connecting { background: #e2c08d; animation: pulse 1s infinite; }
@@ -55,7 +79,6 @@
     .btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .error { color: #f44747; font-size: 12px; margin-top: 8px; }
     .success { color: #73c991; font-size: 12px; margin-top: 8px; }
-    .workspace { font-size: 11px; color: #666; margin-top: 4px; word-break: break-all; }
     .settings-toggle {
       display: flex; align-items: center; justify-content: space-between;
       cursor: pointer; user-select: none;
@@ -75,69 +98,369 @@
     .btn-secondary:hover { background: #4a4a4a; }
     .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
     .restart-note { font-size: 11px; color: #e2c08d; margin-top: 8px; }
+
+    /* Docs page */
+    .docs-content {
+      max-width: 760px; margin: 0 auto; padding: 40px 32px;
+    }
+    .docs-content h1 {
+      font-size: 28px; color: #e2e2e2; margin-bottom: 8px; font-weight: 600;
+      border-bottom: 1px solid #333; padding-bottom: 12px;
+    }
+    .docs-content h2 {
+      font-size: 20px; color: #ddd; margin-top: 32px; margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .docs-content h3 {
+      font-size: 16px; color: #ccc; margin-top: 24px; margin-bottom: 8px;
+      font-weight: 600;
+    }
+    .docs-content p {
+      font-size: 14px; line-height: 1.7; margin-bottom: 12px; color: #bbb;
+    }
+    .docs-content ul, .docs-content ol {
+      margin: 8px 0 12px 24px; font-size: 14px; line-height: 1.7; color: #bbb;
+    }
+    .docs-content li { margin-bottom: 4px; }
+    .docs-content code {
+      background: #2d2d2d; border: 1px solid #404040; border-radius: 3px;
+      padding: 1px 5px; font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 13px; color: #ce9178;
+    }
+    .docs-content pre {
+      background: #1a1a1a; border: 1px solid #333; border-radius: 6px;
+      padding: 16px; margin: 12px 0; overflow-x: auto;
+    }
+    .docs-content pre code {
+      background: none; border: none; padding: 0; color: #d4d4d4;
+      font-size: 13px; line-height: 1.5;
+    }
+    .docs-content table {
+      width: 100%; border-collapse: collapse; margin: 12px 0;
+      font-size: 13px;
+    }
+    .docs-content th {
+      text-align: left; padding: 8px 12px; background: #2a2a2a;
+      border: 1px solid #404040; color: #ddd; font-weight: 600;
+    }
+    .docs-content td {
+      padding: 8px 12px; border: 1px solid #333; color: #bbb;
+    }
+    .docs-content blockquote {
+      border-left: 3px solid #4fc1ff; margin: 12px 0; padding: 8px 16px;
+      background: #1a2332; border-radius: 0 4px 4px 0;
+      font-size: 13px; color: #aac8e4;
+    }
+    .docs-content blockquote p { margin-bottom: 0; color: inherit; }
+    .docs-content strong { color: #e2e2e2; }
+    .docs-content a { color: #4fc1ff; text-decoration: none; }
+    .docs-content a:hover { text-decoration: underline; }
+    .docs-content hr { border: none; border-top: 1px solid #333; margin: 24px 0; }
+
+    .docs-loading {
+      padding: 60px; text-align: center; color: #666; font-size: 14px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar { width: 180px; }
+      .docs-content { padding: 24px 16px; }
+      .home-content { padding: 24px 16px; }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- This Device -->
-    <div class="card">
-      <h2>This Device</h2>
-      <div class="info-row">
-        <span class="info-label">Machine ID</span>
-        <span class="info-value id" id="machineId">---</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Password</span>
-        <span class="info-value password" id="password">---</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Relay</span>
-        <span class="status">
-          <span class="status-dot" id="statusDot"></span>
-          <span id="statusText">Checking...</span>
-        </span>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">VS Code Remote</div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">General</div>
+      <a class="nav-item active" data-page="home" onclick="navigate('home')">
+        <span class="nav-icon">⌂</span> Home
+      </a>
+
+      <div class="nav-section">Documentation</div>
+      <div id="docsNav"></div>
+    </nav>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Home Page -->
+    <div class="page active" id="page-home">
+      <div class="home-content">
+        <!-- This Device -->
+        <div class="card">
+          <h2>This Device</h2>
+          <div class="info-row">
+            <span class="info-label">Machine ID</span>
+            <span class="info-value id" id="machineId">---</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Password</span>
+            <span class="info-value password" id="password">---</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Relay</span>
+            <span class="status">
+              <span class="status-dot" id="statusDot"></span>
+              <span id="statusText">Checking...</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Connect to Remote -->
+        <div class="card">
+          <h2>Connect to Remote</h2>
+          <div class="form-group">
+            <label>Remote Machine ID</label>
+            <input type="text" id="remoteId" placeholder="000-000-000" maxlength="11" />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="remotePassword" placeholder="Enter password" />
+          </div>
+          <button class="btn" id="connectBtn" onclick="connectRemote()">Connect</button>
+          <div class="error" id="error"></div>
+        </div>
+
+        <!-- Settings -->
+        <div class="card">
+          <div class="settings-toggle" onclick="toggleSettings()">
+            <h2 style="margin-bottom:0">Settings</h2>
+            <span class="arrow" id="settingsArrow">&#9654;</span>
+          </div>
+          <div class="settings-body" id="settingsBody">
+            <div class="form-group">
+              <label>Relay URL</label>
+              <input type="text" id="settingRelayUrl" class="setting-input" placeholder="ws://..." />
+            </div>
+            <div class="form-group">
+              <label>Agent Secret</label>
+              <input type="password" id="settingAgentSecret" class="setting-input" placeholder="Secret key" />
+            </div>
+            <button class="btn-secondary" id="saveSettingsBtn" onclick="saveSettings()">Save Settings</button>
+            <div class="restart-note" id="restartNote" style="display:none">Settings saved. Restart agent to apply changes.</div>
+            <div class="error" id="settingsError"></div>
+            <div class="success" id="settingsSuccess" style="display:none"></div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Connect to Remote -->
-    <div class="card">
-      <h2>Connect to Remote</h2>
-      <div class="form-group">
-        <label>Remote Machine ID</label>
-        <input type="text" id="remoteId" placeholder="000-000-000" maxlength="11" />
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="remotePassword" placeholder="Enter password" />
-      </div>
-      <button class="btn" id="connectBtn" onclick="connectRemote()">Connect</button>
-      <div class="error" id="error"></div>
-    </div>
-    <!-- Settings -->
-    <div class="card">
-      <div class="settings-toggle" onclick="toggleSettings()">
-        <h2 style="margin-bottom:0">Settings</h2>
-        <span class="arrow" id="settingsArrow">&#9654;</span>
-      </div>
-      <div class="settings-body" id="settingsBody">
-        <div class="form-group">
-          <label>Relay URL</label>
-          <input type="text" id="settingRelayUrl" class="setting-input" placeholder="ws://..." />
-        </div>
-        <div class="form-group">
-          <label>Agent Secret</label>
-          <input type="password" id="settingAgentSecret" class="setting-input" placeholder="Secret key" />
-        </div>
-        <button class="btn-secondary" id="saveSettingsBtn" onclick="saveSettings()">Save Settings</button>
-        <div class="restart-note" id="restartNote" style="display:none">Settings saved. Restart agent to apply changes.</div>
-        <div class="error" id="settingsError"></div>
-        <div class="success" id="settingsSuccess" style="display:none"></div>
+    <!-- Docs Page -->
+    <div class="page" id="page-docs">
+      <div class="docs-content" id="docsBody">
+        <div class="docs-loading">Select a doc from the sidebar</div>
       </div>
     </div>
   </div>
 
   <script>
-    // Format machine ID as 000-000-000
+    // ===== Navigation =====
+    let currentPage = 'home';
+    let docsCache = {};
+
+    function navigate(page, slug) {
+      // Update nav
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      const target = slug
+        ? document.querySelector(`.nav-item[data-slug="${slug}"]`)
+        : document.querySelector(`.nav-item[data-page="${page}"]`);
+      if (target) target.classList.add('active');
+
+      // Update pages
+      document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+      document.getElementById(`page-${page}`).classList.add('active');
+      currentPage = page;
+
+      if (page === 'docs' && slug) {
+        loadDoc(slug);
+      }
+    }
+
+    // ===== Docs =====
+    const docIcons = {
+      'getting-started': '🚀',
+      'architecture': '🏗',
+      'authentication': '🔑',
+      'port-forwarding': '🌐',
+      'terminal': '⬛',
+      'file-system': '📁',
+    };
+
+    async function loadDocsNav() {
+      try {
+        const res = await fetch('/api/docs');
+        const docs = await res.json();
+        const nav = document.getElementById('docsNav');
+        nav.innerHTML = docs.map(d =>
+          `<a class="nav-item" data-page="docs" data-slug="${d.slug}" onclick="navigate('docs','${d.slug}')">
+            <span class="nav-icon">${docIcons[d.slug] || '📄'}</span> ${d.title}
+          </a>`
+        ).join('');
+      } catch {
+        // ignore
+      }
+    }
+
+    async function loadDoc(slug) {
+      const body = document.getElementById('docsBody');
+
+      if (docsCache[slug]) {
+        body.innerHTML = docsCache[slug];
+        return;
+      }
+
+      body.innerHTML = '<div class="docs-loading">Loading...</div>';
+
+      try {
+        const res = await fetch(`/api/docs/${slug}`);
+        if (!res.ok) throw new Error('Not found');
+        const md = await res.text();
+        const html = renderMarkdown(md);
+        docsCache[slug] = html;
+        body.innerHTML = html;
+      } catch {
+        body.innerHTML = '<div class="docs-loading">Failed to load documentation</div>';
+      }
+    }
+
+    // ===== Simple Markdown Renderer =====
+    function renderMarkdown(md) {
+      let html = '';
+      const lines = md.split('\n');
+      let i = 0;
+      let inCodeBlock = false;
+      let codeContent = '';
+      let inTable = false;
+      let tableRows = [];
+      let inList = false;
+      let listItems = [];
+      let listOrdered = false;
+      let inBlockquote = false;
+      let bqContent = [];
+
+      function flushList() {
+        if (!inList) return;
+        const tag = listOrdered ? 'ol' : 'ul';
+        html += `<${tag}>${listItems.map(l => `<li>${inlineFormat(l)}</li>`).join('')}</${tag}>`;
+        listItems = [];
+        inList = false;
+      }
+
+      function flushTable() {
+        if (!inTable) return;
+        let t = '<table>';
+        tableRows.forEach((row, idx) => {
+          if (row.trim().startsWith('|') && row.includes('---')) return; // separator
+          const cells = row.split('|').filter(c => c.trim() !== '');
+          const tag = idx === 0 ? 'th' : 'td';
+          t += '<tr>' + cells.map(c => `<${tag}>${inlineFormat(c.trim())}</${tag}>`).join('') + '</tr>';
+        });
+        t += '</table>';
+        html += t;
+        tableRows = [];
+        inTable = false;
+      }
+
+      function flushBlockquote() {
+        if (!inBlockquote) return;
+        html += `<blockquote><p>${inlineFormat(bqContent.join(' '))}</p></blockquote>`;
+        bqContent = [];
+        inBlockquote = false;
+      }
+
+      function inlineFormat(text) {
+        return text
+          .replace(/`([^`]+)`/g, '<code>$1</code>')
+          .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+          .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+      }
+
+      while (i < lines.length) {
+        const line = lines[i];
+
+        // Code block
+        if (line.startsWith('```')) {
+          if (inCodeBlock) {
+            html += `<pre><code>${codeContent.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`;
+            codeContent = '';
+            inCodeBlock = false;
+          } else {
+            flushList(); flushTable(); flushBlockquote();
+            inCodeBlock = true;
+          }
+          i++;
+          continue;
+        }
+        if (inCodeBlock) {
+          codeContent += (codeContent ? '\n' : '') + line;
+          i++;
+          continue;
+        }
+
+        // Table
+        if (line.trim().startsWith('|')) {
+          flushList(); flushBlockquote();
+          if (!inTable) inTable = true;
+          tableRows.push(line);
+          i++;
+          continue;
+        } else {
+          flushTable();
+        }
+
+        // Blockquote
+        if (line.startsWith('> ')) {
+          flushList(); flushTable();
+          if (!inBlockquote) inBlockquote = true;
+          bqContent.push(line.slice(2));
+          i++;
+          continue;
+        } else {
+          flushBlockquote();
+        }
+
+        // List
+        const ulMatch = line.match(/^- (.+)/);
+        const olMatch = line.match(/^\d+\. (.+)/);
+        if (ulMatch || olMatch) {
+          flushTable(); flushBlockquote();
+          const content = ulMatch ? ulMatch[1] : olMatch[1];
+          const isOl = !!olMatch;
+          if (inList && listOrdered !== isOl) flushList();
+          inList = true;
+          listOrdered = isOl;
+          listItems.push(content);
+          i++;
+          continue;
+        } else {
+          flushList();
+        }
+
+        // Empty line
+        if (!line.trim()) { i++; continue; }
+
+        // Headings
+        if (line.startsWith('### ')) { html += `<h3>${inlineFormat(line.slice(4))}</h3>`; i++; continue; }
+        if (line.startsWith('## ')) { html += `<h2>${inlineFormat(line.slice(3))}</h2>`; i++; continue; }
+        if (line.startsWith('# ')) { html += `<h1>${inlineFormat(line.slice(2))}</h1>`; i++; continue; }
+
+        // Horizontal rule
+        if (line.match(/^---+$/)) { html += '<hr>'; i++; continue; }
+
+        // Paragraph
+        html += `<p>${inlineFormat(line)}</p>`;
+        i++;
+      }
+
+      flushList(); flushTable(); flushBlockquote();
+      return html;
+    }
+
+    // ===== Home Page Logic =====
     document.getElementById('remoteId').addEventListener('input', function(e) {
       let val = e.target.value.replace(/[^0-9]/g, '').slice(0, 9);
       if (val.length > 6) val = val.slice(0,3) + '-' + val.slice(3,6) + '-' + val.slice(6);
@@ -149,7 +472,6 @@
       try {
         const res = await fetch('/api/status');
         const data = await res.json();
-
         const mid = data.machineId;
         document.getElementById('machineId').textContent =
           mid.slice(0,3) + '-' + mid.slice(3,6) + '-' + mid.slice(6);
@@ -189,7 +511,6 @@
       btn.textContent = 'Connecting...';
 
       try {
-        // Get relay server URL
         const connectRes = await fetch('/api/connect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -201,7 +522,6 @@
           return;
         }
 
-        // Login via relay to get token (not password on URL)
         const relayBase = connectData.editorUrl.replace(/\/editor\/.*$/, '');
         const loginRes = await fetch(`${relayBase}/api/auth/login`, {
           method: 'POST',
@@ -216,7 +536,6 @@
         }
 
         const { token } = await loginRes.json();
-        // Pass only token via URL (short-lived JWT, not password)
         const url = new URL(connectData.editorUrl);
         url.searchParams.set('token', token);
         window.open(url.toString(), '_blank');
@@ -228,7 +547,6 @@
       }
     }
 
-    // Enter key to connect
     document.getElementById('remotePassword').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') connectRemote();
     });
@@ -273,7 +591,6 @@
           body: JSON.stringify({ relayUrl, agentSecret }),
         });
         const data = await res.json();
-
         if (data.success) {
           noteEl.style.display = 'block';
           successEl.textContent = 'Settings saved successfully';
@@ -289,9 +606,10 @@
       }
     }
 
-    // Poll status
+    // ===== Init =====
     fetchStatus();
     setInterval(fetchStatus, 3000);
+    loadDocsNav();
   </script>
 </body>
 </html>
