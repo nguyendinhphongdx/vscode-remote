@@ -27,6 +27,10 @@ export default function LoginPage() {
     const mid = searchParams.get("machineId");
     if (mid) setMachineId(formatMachineId(mid));
 
+    if (searchParams.get("expired") === "1") {
+      setError("Session expired. Please login again.");
+    }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

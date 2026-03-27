@@ -236,6 +236,7 @@ export interface PortProxyResponse {
 export const MSG = {
   // Auth
   AUTH_LOGIN: 'auth:login',
+  AUTH_VERIFY: 'auth:verify',
 
   // Relay
   AGENT_REGISTER: 'agent:register',

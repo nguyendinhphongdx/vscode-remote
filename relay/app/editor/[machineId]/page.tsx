@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
-import { getToken, setToken, isTokenExpired, getMachineId, setMachineId } from "@/lib/auth/auth";
+import { getToken, setToken, isTokenExpired, getTokenExpiry, getMachineId, setMachineId, clearToken, clearMachineId } from "@/lib/auth/auth";
 import { AppShell } from "@/components/layout/AppShell";
 
 export default function EditorPage() {
@@ -35,6 +35,33 @@ export default function EditorPage() {
 
     setReady(true);
   }, [router, machineId, searchParams]);
+
+  // Auto-logout when token expires
+  useEffect(() => {
+    if (!ready) return;
+
+    const token = getToken();
+    if (!token) return;
+
+    const expiry = getTokenExpiry(token);
+    if (!expiry) return;
+
+    const timeLeft = expiry - Date.now();
+    if (timeLeft <= 0) {
+      clearToken();
+      clearMachineId();
+      router.replace(`/login?machineId=${machineId}&expired=1`);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      clearToken();
+      clearMachineId();
+      router.replace(`/login?machineId=${machineId}&expired=1`);
+    }, timeLeft);
+
+    return () => clearTimeout(timer);
+  }, [ready, router, machineId]);
 
   if (!ready) {
     return (

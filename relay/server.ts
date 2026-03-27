@@ -1,12 +1,51 @@
-import { createServer } from "http";
+import { createServer, type IncomingMessage } from "http";
 import type { Socket } from "net";
 import { WebSocketServer, WebSocket, type RawData } from "ws";
 import { v4 as uuid } from "uuid";
+import crypto from "crypto";
 import next from "next";
 
 const dev = process.env.NODE_ENV !== "production";
 const port = parseInt(process.env.PORT || "9001", 10);
 const relaySecret = process.env.RELAY_SECRET || "dev-secret";
+const adminPassword = process.env.ADMIN_PASSWORD || "";
+const adminTokenSecret = crypto.randomBytes(32).toString("hex");
+
+// ============ Admin Auth Helpers ============
+
+function signAdminToken(): string {
+  const payload = JSON.stringify({ role: "admin", iat: Date.now() });
+  const hmac = crypto.createHmac("sha256", adminTokenSecret).update(payload).digest("hex");
+  return Buffer.from(payload).toString("base64") + "." + hmac;
+}
+
+function verifyAdminToken(token: string): boolean {
+  const parts = token.split(".");
+  if (parts.length !== 2) return false;
+  try {
+    const payload = Buffer.from(parts[0], "base64").toString();
+    const data = JSON.parse(payload);
+    // Token expires after 24h
+    if (Date.now() - data.iat > 24 * 60 * 60 * 1000) return false;
+    const expectedHmac = crypto.createHmac("sha256", adminTokenSecret).update(payload).digest("hex");
+    return crypto.timingSafeEqual(Buffer.from(parts[1]), Buffer.from(expectedHmac));
+  } catch {
+    return false;
+  }
+}
+
+function getAdminToken(req: IncomingMessage): string | null {
+  const cookie = req.headers.cookie;
+  if (!cookie) return null;
+  const match = cookie.match(/(?:^|;\s*)admin_token=([^;]+)/);
+  return match ? match[1] : null;
+}
+
+function isAdminAuthed(req: IncomingMessage): boolean {
+  if (!adminPassword) return true; // No password set = open access
+  const token = getAdminToken(req);
+  return token ? verifyAdminToken(token) : false;
+}
 
 const app = next({ dev, turbopack: dev });
 const handle = app.getRequestHandler();
@@ -248,6 +287,39 @@ function forwardPortProxy(
   });
 }
 
+// ============ Token Verification via Agent ============
+
+function verifyTokenViaAgent(
+  machineId: string,
+  token: string
+): Promise<{ success: boolean; error?: string }> {
+  return new Promise((resolve) => {
+    const agent = agents.get(machineId);
+    if (!agent) {
+      resolve({ success: false, error: "Agent offline" });
+      return;
+    }
+
+    const id = uuid();
+    const timeout = setTimeout(() => {
+      pendingHttpRequests.delete(id);
+      resolve({ success: false, error: "Verification timeout" });
+    }, 5000);
+
+    pendingHttpRequests.set(id, (response) => {
+      clearTimeout(timeout);
+      const res = response as { success: boolean; error?: string };
+      resolve({ success: res.success, error: res.error });
+    });
+
+    agent.ws.send(JSON.stringify({
+      id,
+      type: "auth:verify",
+      payload: { token },
+    }));
+  });
+}
+
 // ============ Start ============
 
 app.prepare().then(() => {
@@ -262,6 +334,55 @@ app.prepare().then(() => {
     if (req.method === "OPTIONS") {
       res.writeHead(204);
       res.end();
+      return;
+    }
+
+    // POST /api/admin/login — admin dashboard login
+    if (req.url === "/api/admin/login" && req.method === "POST") {
+      let body = "";
+      req.on("data", (chunk: Buffer) => (body += chunk));
+      req.on("end", () => {
+        try {
+          const { password } = JSON.parse(body);
+          if (!adminPassword) {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "Admin password not configured" }));
+            return;
+          }
+          if (password !== adminPassword) {
+            res.writeHead(401, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "Invalid password" }));
+            return;
+          }
+          const token = signAdminToken();
+          res.writeHead(200, {
+            "Content-Type": "application/json",
+            "Set-Cookie": `admin_token=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400${!dev ? "; Secure" : ""}`,
+          });
+          res.end(JSON.stringify({ success: true }));
+        } catch {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Invalid JSON" }));
+        }
+      });
+      return;
+    }
+
+    // GET /api/admin/check — verify admin session
+    if (req.url === "/api/admin/check" && req.method === "GET") {
+      const authed = isAdminAuthed(req);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ authenticated: authed, required: !!adminPassword }));
+      return;
+    }
+
+    // POST /api/admin/logout — clear admin cookie
+    if (req.url === "/api/admin/logout" && req.method === "POST") {
+      res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Set-Cookie": `admin_token=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`,
+      });
+      res.end(JSON.stringify({ success: true }));
       return;
     }
 
@@ -294,8 +415,13 @@ app.prepare().then(() => {
       return;
     }
 
-    // GET /api/agents — list online agents (for dashboard)
+    // GET /api/agents — list online agents (protected, admin only)
     if (req.url === "/api/agents" && req.method === "GET") {
+      if (!isAdminAuthed(req)) {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Unauthorized" }));
+        return;
+      }
       const list = Array.from(agents.values()).map((a) => ({
         machineId: a.machineId,
         connectedAt: a.connectedAt.toISOString(),
@@ -358,7 +484,7 @@ app.prepare().then(() => {
     const nextUpgradeListeners = server.listeners("upgrade").slice();
     server.removeAllListeners("upgrade");
 
-    server.on("upgrade", (req, socket: Socket, head) => {
+    server.on("upgrade", async (req, socket: Socket, head) => {
       const url = new URL(req.url || "/", `http://localhost:${port}`);
 
       if (url.pathname === "/api/agent-ws") {
@@ -367,9 +493,20 @@ app.prepare().then(() => {
           handleAgentConnection(ws);
         });
       } else if (url.pathname === "/api/ws") {
-        // Browser connection
+        // Browser connection — requires machineId + valid token
         const machineId = url.searchParams.get("machineId");
+        const token = url.searchParams.get("token");
         if (!machineId) {
+          socket.destroy();
+          return;
+        }
+        if (!token) {
+          socket.destroy();
+          return;
+        }
+        // Verify token via agent before allowing connection
+        const verifyResult = await verifyTokenViaAgent(machineId, token);
+        if (!verifyResult.success) {
           socket.destroy();
           return;
         }

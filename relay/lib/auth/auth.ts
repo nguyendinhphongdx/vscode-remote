@@ -14,13 +14,18 @@ export function clearToken(): void {
   sessionStorage.removeItem(TOKEN_KEY);
 }
 
-export function isTokenExpired(token: string): boolean {
+export function getTokenExpiry(token: string): number | null {
   try {
     const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.exp * 1000 < Date.now();
+    return payload.exp * 1000; // ms
   } catch {
-    return true;
+    return null;
   }
+}
+
+export function isTokenExpired(token: string): boolean {
+  const expiry = getTokenExpiry(token);
+  return expiry === null || expiry < Date.now();
 }
 
 export function getMachineId(): string | null {

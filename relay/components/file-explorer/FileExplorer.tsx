@@ -22,12 +22,14 @@ export function FileExplorer({ onOpenFolder }: FileExplorerProps) {
   const { workspaceRoot } = useWorkspaceStore();
   const { ws, status } = useWebSocket();
   const [creating, setCreating] = useState<"file" | "directory" | null>(null);
+  const [loadingTree, setLoadingTree] = useState(true);
 
   const hasWorkspace = !!workspaceRoot;
 
   useEffect(() => {
     if (status === "connected" && hasWorkspace) {
-      listDirectory(".");
+      setLoadingTree(true);
+      listDirectory(".").finally(() => setLoadingTree(false));
       refreshStatus();
     }
   }, [status, hasWorkspace, listDirectory, refreshStatus]);
@@ -121,7 +123,13 @@ export function FileExplorer({ onOpenFolder }: FileExplorerProps) {
             <FileTreeNode key={entry.path} entry={entry} depth={0} />
           ))}
 
-          {rootEntries.length === 0 && status === "connected" && (
+          {rootEntries.length === 0 && status === "connected" && loadingTree && (
+            <div className="px-4 py-8 text-text-muted text-xs text-center">
+              <div className="animate-spin w-4 h-4 border-2 border-text-muted border-t-transparent rounded-full mx-auto mb-2" />
+              Loading...
+            </div>
+          )}
+          {rootEntries.length === 0 && status === "connected" && !loadingTree && (
             <div className="px-4 py-8 text-text-muted text-xs text-center">
               No files in workspace
             </div>

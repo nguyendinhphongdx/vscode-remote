@@ -15,6 +15,8 @@ import {
   LayoutDashboard,
   Users,
   ChevronDown,
+  Lock,
+  LogOut,
 } from "lucide-react";
 
 interface AgentInfo {
@@ -64,7 +66,90 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+// ============ Admin Login Screen ============
+
+function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Login failed");
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="h-full flex items-center justify-center" style={{ background: "#f0f2f5", fontFamily: "var(--font-inter), sans-serif" }}>
+      <div className="w-full max-w-sm">
+        <div
+          className="rounded-2xl p-8"
+          style={{ background: "#fff", border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+        >
+          <div className="text-center mb-6">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: "linear-gradient(135deg, #4f6ef7, #7c5bf6)" }}
+            >
+              <Lock size={20} className="text-white" />
+            </div>
+            <h1 className="text-xl font-bold" style={{ color: "#23233b" }}>Admin Login</h1>
+            <p className="text-sm mt-1" style={{ color: "#9ca3af" }}>Enter password to access dashboard</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3 rounded-lg text-sm" style={{ background: "#fef2f2", color: "#ef4444", border: "1px solid #fecaca" }}>
+                {error}
+              </div>
+            )}
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="w-full px-4 py-3 rounded-lg text-sm outline-none"
+              style={{ background: "#fff", border: "1px solid #e0e3eb", color: "#23233b" }}
+              onFocus={(e) => (e.target.style.borderColor = "#4f6ef7")}
+              onBlur={(e) => (e.target.style.borderColor = "#e0e3eb")}
+              autoFocus
+              required
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+              style={{ background: "#4f6ef7" }}
+            >
+              {loading ? "Logging in..." : "Login"}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============ Dashboard ============
+
 export default function HomePage() {
+  const [adminChecking, setAdminChecking] = useState(true);
+  const [adminAuthed, setAdminAuthed] = useState(false);
+  const [adminRequired, setAdminRequired] = useState(false);
   const [machineId, setMid] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -73,14 +158,31 @@ export default function HomePage() {
   const [recent, setRecent] = useState<RecentConnection[]>([]);
   const router = useRouter();
 
+  // Check admin auth on mount
   useEffect(() => {
-    setRecent(getRecent());
+    fetch("/api/admin/check")
+      .then((res) => res.json())
+      .then((data) => {
+        setAdminRequired(data.required);
+        setAdminAuthed(data.authenticated);
+      })
+      .catch(() => {
+        setAdminAuthed(false);
+      })
+      .finally(() => setAdminChecking(false));
   }, []);
 
   useEffect(() => {
+    if (!adminAuthed && adminRequired) return;
+    setRecent(getRecent());
+  }, [adminAuthed, adminRequired]);
+
+  useEffect(() => {
+    if (!adminAuthed && adminRequired) return;
     const fetchAgents = async () => {
       try {
         const res = await fetch("/api/agents");
+        if (!res.ok) return;
         const data = await res.json();
         setAgents(data.agents || []);
       } catch {
@@ -90,7 +192,24 @@ export default function HomePage() {
     fetchAgents();
     const interval = setInterval(fetchAgents, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [adminAuthed, adminRequired]);
+
+  const handleAdminLogout = async () => {
+    await fetch("/api/admin/logout", { method: "POST" });
+    setAdminAuthed(false);
+  };
+
+  if (adminChecking) {
+    return (
+      <div className="h-full flex items-center justify-center" style={{ background: "#f0f2f5" }}>
+        <div className="animate-spin w-6 h-6 border-2 border-[#4f6ef7] border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (adminRequired && !adminAuthed) {
+    return <AdminLogin onSuccess={() => setAdminAuthed(true)} />;
+  }
 
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,7 +339,17 @@ export default function HomePage() {
             >
               A
             </div>
-            <span className="text-xs" style={{ color: "#6b7280" }}>Admin</span>
+            <span className="text-xs flex-1" style={{ color: "#6b7280" }}>Admin</span>
+            {adminRequired && (
+              <button
+                onClick={handleAdminLogout}
+                className="p-1 rounded hover:bg-gray-100"
+                title="Logout"
+                style={{ color: "#9ca3af" }}
+              >
+                <LogOut size={14} />
+              </button>
+            )}
           </div>
         </div>
       </aside>
