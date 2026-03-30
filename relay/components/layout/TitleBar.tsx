@@ -234,7 +234,7 @@ export function TitleBar({ onOpenFolder, onNewTerminal }: TitleBarProps) {
       <div className="flex-1" />
       <button
         onClick={onOpenFolder}
-        className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-[2px] bg-[#505050] hover:bg-[#5a5a5a] rounded-md text-[12px] text-[#999] w-[70%] sm:w-[40%] sm:min-w-[200px] max-w-[500px] justify-center truncate"
+        className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-[2px] bg-[#505050] hover:bg-[#5a5a5a] rounded-md text-[12px] text-[#999] w-[70%] md:w-[40%] md:min-w-52 max-w-125 justify-center truncate"
       >
         <Search size={12} />
         <span>
