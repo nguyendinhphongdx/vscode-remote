@@ -16,6 +16,15 @@ import type { AgentSettings } from './types/config.types.js';
 
 export { configStore };
 
+declare const __BUILD_RELAY_URL__: string;
+declare const __BUILD_RELAY_SECRET__: string;
+
+// Runtime env > build-time bake > persisted config
+const ENV_OVERRIDES: Record<string, () => string | undefined> = {
+  relayUrl: () => process.env.RELAY_URL || (typeof __BUILD_RELAY_URL__ !== 'undefined' ? __BUILD_RELAY_URL__ : undefined),
+  relaySecret: () => process.env.RELAY_SECRET || (typeof __BUILD_RELAY_SECRET__ !== 'undefined' ? __BUILD_RELAY_SECRET__ : undefined),
+};
+
 // Backward-compatible config object that reads from the store
 // Must call configStore.initialize() before accessing
 export const config: AgentSettings & { machineId: string } = new Proxy(
@@ -24,6 +33,9 @@ export const config: AgentSettings & { machineId: string } = new Proxy(
     get(_target, prop: string) {
       const store = configStore.get();
       if (prop === 'machineId') return store.machineId;
+      // Env/build-time values override persisted config
+      const envOverride = ENV_OVERRIDES[prop]?.();
+      if (envOverride) return envOverride;
       return (store.settings as unknown as Record<string, unknown>)[prop];
     },
   }

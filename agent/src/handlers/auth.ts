@@ -6,6 +6,24 @@ import { verifyPassword } from '../services/passwordService.js';
 import { sendResponse } from './router.js';
 import { logger } from '../utils/logger.js';
 
+// Rate limit: max 5 failed login attempts per 60 seconds
+const LOGIN_WINDOW_MS = 60_000;
+const LOGIN_MAX_ATTEMPTS = 5;
+const loginAttempts: { ts: number }[] = [];
+
+function isLoginRateLimited(): boolean {
+  const now = Date.now();
+  // Remove expired entries
+  while (loginAttempts.length > 0 && now - loginAttempts[0].ts > LOGIN_WINDOW_MS) {
+    loginAttempts.shift();
+  }
+  return loginAttempts.length >= LOGIN_MAX_ATTEMPTS;
+}
+
+function recordFailedLogin(): void {
+  loginAttempts.push({ ts: Date.now() });
+}
+
 export async function handleAuthMessage(
   ws: WebSocket,
   id: string,
@@ -16,12 +34,19 @@ export async function handleAuthMessage(
     case MSG.AUTH_LOGIN: {
       const { machineId, password } = (payload || {}) as { machineId?: string; password?: string };
 
+      if (isLoginRateLimited()) {
+        logger.warn('Login rate limited');
+        sendResponse(ws, id, type, false, undefined, 'Too many login attempts. Try again later.');
+        return;
+      }
+
       if (!machineId || !password) {
         sendResponse(ws, id, type, false, undefined, 'machineId and password are required');
         return;
       }
 
       if (machineId !== config.machineId) {
+        recordFailedLogin();
         logger.warn('Failed login attempt: wrong machine ID', { machineId });
         sendResponse(ws, id, type, false, undefined, 'Invalid machine ID or password');
         return;
@@ -30,6 +55,7 @@ export async function handleAuthMessage(
       const store = configStore.get();
       const valid = await verifyPassword(password, store.passwords);
       if (!valid) {
+        recordFailedLogin();
         logger.warn('Failed login attempt: wrong password');
         sendResponse(ws, id, type, false, undefined, 'Invalid machine ID or password');
         return;

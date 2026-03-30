@@ -6,6 +6,21 @@ import * as tunnelService from '../services/tunnelService.js';
 import { sendResponse } from './router.js';
 import { logger } from '../utils/logger.js';
 
+// Ports that should never be forwarded (security-sensitive services)
+const PORT_BLACKLIST = new Set([
+  22,    // SSH
+  23,    // Telnet
+  25,    // SMTP
+  53,    // DNS
+  135,   // MSRPC
+  139,   // NetBIOS
+  445,   // SMB
+  3306,  // MySQL
+  5432,  // PostgreSQL
+  6379,  // Redis
+  27017, // MongoDB
+]);
+
 // Track which ports are being forwarded
 const forwardedPorts = new Set<number>();
 
@@ -36,6 +51,10 @@ export async function handlePortMessage(
     }
     case MSG.PORT_FORWARD: {
       const { port } = payload as PortForwardPayload;
+      if (PORT_BLACKLIST.has(port)) {
+        sendResponse(ws, id, type, false, { error: `Port ${port} is blacklisted for security reasons` });
+        break;
+      }
       try {
         const tunnelUrl = await tunnelService.createTunnel(port);
         forwardedPorts.add(port);

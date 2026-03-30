@@ -79,11 +79,18 @@ export async function updateSettings(partial: Partial<AgentSettings>): Promise<A
   return config.settings;
 }
 
+export async function rotateJwtSecret(): Promise<void> {
+  const config = get();
+  config.settings.jwtSecret = crypto.randomBytes(64).toString('hex');
+  await writeConfig(config);
+}
+
 export async function regenerateRandomPassword(): Promise<string> {
   const config = get();
   const plain = generateRandomPassword();
   const hash = await hashPassword(plain);
   config.passwords.random = { hash, displayValue: plain };
+  config.settings.jwtSecret = crypto.randomBytes(64).toString('hex');
   await writeConfig(config);
   return plain;
 }
@@ -96,6 +103,7 @@ export async function setFixedPassword(plain: string): Promise<void> {
   const config = get();
   const hash = await hashPassword(plain);
   config.passwords.fixed = { hash };
+  config.settings.jwtSecret = crypto.randomBytes(64).toString('hex');
   await writeConfig(config);
 }
 

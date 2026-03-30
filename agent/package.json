@@ -1,6 +1,6 @@
 {
   "name": "opencode-remote",
-  "version": "0.3.11",
+  "version": "0.3.16",
   "type": "module",
   "description": "OpenCode — access your dev environment from anywhere",
   "bin": {
@@ -22,6 +22,11 @@
     "node": ">=20.0.0"
   },
   "keywords": ["vscode", "remote", "agent", "ide", "editor", "terminal"],
+  "homepage": "https://vscode-remote-production.up.railway.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nguyendinhphongdx/vscode-remote"
+  },
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^3.0.3",

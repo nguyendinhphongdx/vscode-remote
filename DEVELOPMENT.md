@@ -2,6 +2,45 @@
 
 Technical documentation for contributors working on VS Code Remote.
 
+## Getting Started
+
+### Prerequisites
+
+- Node.js >= 20
+- npm (comes with Node.js)
+
+### Setup
+
+```bash
+git clone <repo-url>
+cd vscode-remote
+npm install                    # Install all workspaces (shared, agent, relay)
+cp .env.example .env           # Copy env template, fill in values
+npm run build:shared           # Build shared package first
+```
+
+### Running locally
+
+```bash
+# Terminal 1: Agent
+npm run dev:agent
+
+# Terminal 2: Relay
+npm run dev:relay
+```
+
+Agent runs at `http://localhost:9000`, relay at `http://localhost:9001`.
+
+### Required `.env` variables
+
+```env
+RELAY_SECRET=your-shared-secret    # Must match on both agent and relay
+RELAY_URL=ws://localhost:9001/api/agent-ws
+WORKSPACE_ROOT=/path/to/your/project
+```
+
+See [Environment Variables](#environment-variables) for full list.
+
 ## Monorepo Structure
 
 ```

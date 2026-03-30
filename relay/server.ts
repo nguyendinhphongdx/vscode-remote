@@ -22,6 +22,11 @@ loadEnvConfig(process.cwd());
 const dev = process.env.NODE_ENV !== "production";
 const port = parseInt(process.env.PORT || "9001", 10);
 const relaySecret = process.env.RELAY_SECRET;
+
+if (!relaySecret) {
+  console.error("FATAL: RELAY_SECRET environment variable is required.");
+  process.exit(1);
+}
 const adminPassword = process.env.ADMIN_PASSWORD || "";
 const adminTokenSecret = crypto.randomBytes(32).toString("hex");
 
