@@ -15,7 +15,7 @@ const UI_DIR = existsSync(path.resolve(__dirname, '../../ui/index.html'))
   : path.resolve(__dirname, '../ui');
 const DOCS_DIR = path.resolve(UI_DIR, 'docs');
 
-export function createLocalServer(relayClient: RelayClient) {
+export function createLocalServer(relayClient: RelayClient): void {
   const app = express();
   app.use(express.json());
 
@@ -137,5 +137,4 @@ export function createLocalServer(relayClient: RelayClient) {
     logger.info(`Agent UI available at http://localhost:${port}`);
   });
 
-  return app;
 }
