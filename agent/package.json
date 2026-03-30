@@ -21,7 +21,14 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "keywords": ["vscode", "remote", "agent", "ide", "editor", "terminal"],
+  "keywords": [
+    "vscode",
+    "remote",
+    "agent",
+    "ide",
+    "editor",
+    "terminal"
+  ],
   "homepage": "https://vscode-remote-production.up.railway.app",
   "repository": {
     "type": "git",
@@ -29,6 +36,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@vscode-remote/shared": "workspace:*",
     "bcryptjs": "^3.0.3",
     "chokidar": "^4.0.0",
     "cors": "^2.8.5",
