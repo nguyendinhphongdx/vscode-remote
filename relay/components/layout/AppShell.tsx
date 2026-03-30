@@ -124,7 +124,7 @@ export function AppShell() {
 
   return (
     <div className="h-full flex flex-col">
-      <TitleBar onOpenFolder={handleOpenFolder} />
+      <TitleBar onOpenFolder={handleOpenFolder} onNewTerminal={handleCreateTerminal} />
       <div className="flex-1 flex overflow-hidden">
         {/* Activity Bar */}
         <div className="w-12 bg-bg-secondary flex flex-col items-center pt-1 shrink-0 border-r border-border">

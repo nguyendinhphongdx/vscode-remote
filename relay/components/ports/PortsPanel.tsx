@@ -157,7 +157,7 @@ export function PortsPanel({ onPreview }: PortsPanelProps) {
               </span>
 
               {/* Actions */}
-              <span className="w-[70px] shrink-0 flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100">
+              <span className="w-[70px] shrink-0 flex items-center justify-end gap-0.5">
                 {isForwarded ? (
                   <>
                     {tunnelUrl && onPreview && (

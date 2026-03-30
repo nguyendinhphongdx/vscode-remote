@@ -5,6 +5,7 @@ import { v4 as uuid } from 'uuid';
 import { MSG, type WSMessage, type WSResponse } from '@vscode-remote/shared';
 import { routeMessage, sendEvent } from '../handlers/router.js';
 import { addSubscriber, removeSubscriber } from '../services/watcherService.js';
+import { closeAllTerminals } from '../services/ptyService.js';
 import { logger } from '../utils/logger.js';
 
 export class RelayClient {
@@ -67,6 +68,7 @@ export class RelayClient {
         }
         if (parsed.type === MSG.BROWSER_DISCONNECTED) {
           removeSubscriber();
+          closeAllTerminals();
           return;
         }
       } catch {

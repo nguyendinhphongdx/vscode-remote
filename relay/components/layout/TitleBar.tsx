@@ -29,9 +29,10 @@ interface Menu {
 
 interface TitleBarProps {
   onOpenFolder?: () => void;
+  onNewTerminal?: () => void;
 }
 
-export function TitleBar({ onOpenFolder }: TitleBarProps) {
+export function TitleBar({ onOpenFolder, onNewTerminal }: TitleBarProps) {
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const menuBarRef = useRef<HTMLDivElement>(null);
   const { branch } = useGitStore();
@@ -103,7 +104,7 @@ export function TitleBar({ onOpenFolder }: TitleBarProps) {
     {
       label: "Terminal",
       items: [
-        { label: "New Terminal", shortcut: "Ctrl+Shift+`" },
+        { label: "New Terminal", shortcut: "Ctrl+Shift+`", action: onNewTerminal },
         { label: "divider", divider: true },
         { label: "Run Task...", disabled: true },
         { label: "Run Build Task...", shortcut: "Ctrl+Shift+B", disabled: true },
