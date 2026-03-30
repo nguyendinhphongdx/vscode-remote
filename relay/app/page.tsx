@@ -563,12 +563,20 @@ function GuideSection() {
   );
 }
 
+const PKG_CMDS = {
+  npm:  { prefix: "npm i -g",        pkg: "opencode-remote@latest" },
+  pnpm: { prefix: "pnpm add -g",     pkg: "opencode-remote@latest" },
+  yarn: { prefix: "yarn global add", pkg: "opencode-remote" },
+} as const;
+
 export default function LandingPage() {
   const [machineId, setMid] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pkgTab, setPkgTab] = useState<keyof typeof PKG_CMDS>("npm");
+  const [osTab, setOsTab] = useState("Linux");
   const router = useRouter();
 
   const handleConnect = async (e: React.FormEvent) => {
@@ -915,18 +923,18 @@ export default function LandingPage() {
                     <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#4ade80" }} />
                   </div>
                   <div className="flex gap-1 ml-2">
-                    {["npm", "pnpm", "yarn"].map((tab) => (
-                      <span key={tab} className="text-[11px] px-3 py-1 rounded-lg cursor-default transition-colors" style={{ background: tab === "npm" ? "rgba(59,130,246,0.15)" : "transparent", color: tab === "npm" ? "#60a5fa" : "#52525b", border: tab === "npm" ? "1px solid rgba(59,130,246,0.25)" : "1px solid transparent" }}>
+                    {(["npm", "pnpm", "yarn"] as const).map((tab) => (
+                      <button key={tab} onClick={() => setPkgTab(tab)} className="text-[11px] px-3 py-1 rounded-lg transition-colors" style={{ background: tab === pkgTab ? "rgba(59,130,246,0.15)" : "transparent", color: tab === pkgTab ? "#60a5fa" : "#52525b", border: tab === pkgTab ? "1px solid rgba(59,130,246,0.25)" : "1px solid transparent" }}>
                         {tab}
-                      </span>
+                      </button>
                     ))}
                   </div>
                 </div>
                 <div className="hidden sm:flex items-center gap-1.5">
                   {["macOS", "Linux", "Windows"].map((os) => (
-                    <span key={os} className="text-[10px] px-2.5 py-0.5 rounded-md" style={{ background: "rgba(255,255,255,0.04)", color: "#52525b", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <button key={os} onClick={() => setOsTab(os)} className="text-[10px] px-2.5 py-0.5 rounded-md transition-colors" style={{ background: os === osTab ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)", color: os === osTab ? "#d4d4d8" : "#52525b", border: os === osTab ? "1px solid rgba(255,255,255,0.15)" : "1px solid rgba(255,255,255,0.06)" }}>
                       {os}
-                    </span>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -940,10 +948,10 @@ export default function LandingPage() {
                 </div>
                 <div className="flex items-center gap-2 group/cmd pl-8">
                   <span style={{ color: "#4ade80" }}>$</span>
-                  <span className="font-semibold" style={{ color: "#e4e4e7" }}>npm i -g</span>
-                  <span style={{ color: "#60a5fa" }}>opencode-remote</span>
+                  <span className="font-semibold" style={{ color: "#e4e4e7" }}>{PKG_CMDS[pkgTab].prefix}</span>
+                  <span style={{ color: "#60a5fa" }}>{PKG_CMDS[pkgTab].pkg}</span>
                   <button
-                    onClick={() => navigator.clipboard.writeText("npm i -g opencode-remote@latest")}
+                    onClick={() => navigator.clipboard.writeText(`${PKG_CMDS[pkgTab].prefix} ${PKG_CMDS[pkgTab].pkg}`)}
                     className="ml-auto p-1.5 rounded-lg opacity-0 group-hover/cmd:opacity-100 transition-all hover:scale-110"
                     style={{ color: "#52525b", background: "rgba(255,255,255,0.05)" }}
                     title="Copy"

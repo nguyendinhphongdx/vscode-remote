@@ -1,6 +1,10 @@
-# VS Code Remote
+# VS Code Remote — Vibecode Everywhere
 
-A web-based remote development environment. Access your machine's file system, terminal, git, and forwarded ports from any browser -- desktop or mobile.
+**Full VS Code experience from any browser. On desktop, tablet, or mobile. Even as a native PWA app on your iPhone home screen.**
+
+Born from the need for true VS Code on mobile (where Claude Code dispatch was almost perfect, but lacked real terminal access and browser preview), this project brings the power of AnyDesk and TeamViewer to development.
+
+Code anywhere. Use Claude CLI with voice from your device's terminal. Deploy with Cloudflare Tunnel in minutes.
 
 ![Landing](https://img.shields.io/badge/status-beta-blue) ![Node](https://img.shields.io/badge/node-%3E%3D20-green) ![License](https://img.shields.io/badge/license-MIT-blue)
 
