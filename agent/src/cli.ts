@@ -38,6 +38,7 @@ const commands: Record<string, CommandInfo> = {
   install:   { description: 'Register as system service (auto-start)', handler: cmdInstall },
   uninstall: { description: 'Remove system service',              handler: cmdUninstall },
   run:       { description: 'Run agent in foreground',            handler: cmdRun },
+  upgrade:   { description: 'Upgrade to latest (or specified) version', handler: cmdUpgrade },
   purge:     { description: 'Completely remove agent from this machine', handler: cmdPurge },
   help:      { description: 'Show this help message',             handler: cmdHelp },
 };
@@ -349,6 +350,52 @@ function cmdUninstall() {
   }
 }
 
+function cmdUpgrade() {
+  const target = args[0] || 'latest';
+  const pkg = 'opencode-remote';
+
+  console.log(`Upgrading ${pkg} to ${target}...`);
+
+  // Stop agent if running
+  const wasRunning = isRunning();
+  if (wasRunning) {
+    console.log('Stopping agent...');
+    cmdStop();
+  }
+
+  const installCmd = `npm install -g ${pkg}@${target}`;
+  try {
+    execSync(installCmd, { stdio: 'inherit' });
+  } catch {
+    // Permission error — retry with sudo on Linux/macOS
+    if (process.platform !== 'win32') {
+      console.log('Permission denied, retrying with sudo...');
+      try {
+        execSync(`sudo ${installCmd}`, { stdio: 'inherit' });
+      } catch (err) {
+        console.error('Upgrade failed:', (err as Error).message);
+        process.exit(1);
+      }
+    } else {
+      console.error('Upgrade failed. Try running as Administrator.');
+      process.exit(1);
+    }
+  }
+
+  console.log('Upgrade complete.');
+  // Show new version
+  try {
+    const ver = execSync(`${pkg === 'opencode-remote' ? 'opencode' : pkg} --version`, { encoding: 'utf-8' }).trim();
+    console.log(`  Version: ${ver}`);
+  } catch { /* ignore */ }
+
+  // Restart if it was running
+  if (wasRunning) {
+    console.log('Restarting agent...');
+    cmdStart();
+  }
+}
+
 function cmdPurge() {
   console.log('');
   console.log('  ⚠ This will completely remove OpenCode Agent from this machine:');
@@ -417,6 +464,8 @@ function cmdHelp() {
   console.log('    opencode id             Show Machine ID');
   console.log('    opencode logs -f        Follow log output');
   console.log('    opencode run            Run in foreground (debug)');
+  console.log('    opencode upgrade         Upgrade to latest version');
+  console.log('    opencode upgrade 0.4.0   Upgrade to specific version');
   console.log('    opencode purge --yes    Remove agent completely');
   console.log('');
 }
