@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /editor/
+
+Sitemap: https://vscode-remote-production.up.railway.app/sitemap.xml

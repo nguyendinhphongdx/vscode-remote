@@ -31,22 +31,42 @@ export const metadata: Metadata = {
     "PWA",
   ],
   authors: [{ name: "VS Code Remote" }],
+  alternates: {
+    canonical: "https://vscode-remote-production.up.railway.app",
+  },
   openGraph: {
     type: "website",
+    url: "https://vscode-remote-production.up.railway.app",
     title: "VS Code Remote — Vibecode everywhere",
     description:
       "Connect to your remote machine with a 9-digit code. Full VS Code experience with terminal, file explorer, git, and port forwarding — all in your browser.",
     siteName: "VS Code Remote",
+    images: [
+      {
+        url: "https://vscode-remote-production.up.railway.app/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "VS Code Remote - Remote development from anywhere",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "VS Code Remote — Vibecode everywhere",
     description:
       "Secure remote development from anywhere. Terminal, file explorer, git, port forwarding — all in your browser.",
+    images: ["https://vscode-remote-production.up.railway.app/og-image.png"],
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-snippet": -1,
+      "max-image-preview": "large",
+      "max-video-preview": -1,
+    },
   },
   appleWebApp: {
     capable: true,
@@ -71,6 +91,28 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistMono.variable} ${inter.variable} h-full`} suppressHydrationWarning>
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              "name": "VS Code Remote",
+              "description": "Access your remote development environment from any browser. Full VS Code experience with terminal, file explorer, git integration, and port forwarding — secured with JWT authentication.",
+              "url": "https://vscode-remote-production.up.railway.app",
+              "applicationCategory": "DeveloperApplication",
+              "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+              },
+              "author": {
+                "@type": "Organization",
+                "name": "VS Code Remote"
+              }
+            }),
+          }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
