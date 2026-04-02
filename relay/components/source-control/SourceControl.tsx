@@ -13,6 +13,8 @@ import {
   ChevronDown,
   ChevronRight,
   Check,
+  ArrowUpFromLine,
+  ArrowDownToLine,
 } from "lucide-react";
 import type { GitFileStatus } from '@vscode-remote/shared';
 
@@ -100,12 +102,15 @@ function FileItem({
 
 export function SourceControl() {
   const { stagedFiles, changedFiles, changeCount } = useGitStore();
-  const { refreshStatus, stageFile, stageAll, unstageFile, unstageAll, discardFile, commit } = useGit();
+  const { refreshStatus, stageFile, stageAll, unstageFile, unstageAll, discardFile, commit, push, pull } = useGit();
   const { status } = useWebSocket();
   const [commitMessage, setCommitMessage] = useState("");
   const [stagedExpanded, setStagedExpanded] = useState(true);
   const [changesExpanded, setChangesExpanded] = useState(true);
   const [committing, setCommitting] = useState(false);
+  const [pushing, setPushing] = useState(false);
+  const [pulling, setPulling] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<{ text: string; error?: boolean } | null>(null);
   const [discardTarget, setDiscardTarget] = useState<string | null>(null);
 
   useEffect(() => {
@@ -124,6 +129,36 @@ export function SourceControl() {
       console.error("Commit failed:", err);
     } finally {
       setCommitting(false);
+    }
+  };
+
+  const handlePush = async () => {
+    if (pushing) return;
+    setPushing(true);
+    setSyncMessage(null);
+    try {
+      const result = await push();
+      setSyncMessage({ text: result?.summary || "Pushed" });
+    } catch (err) {
+      setSyncMessage({ text: String((err as Error).message || "Push failed"), error: true });
+    } finally {
+      setPushing(false);
+      setTimeout(() => setSyncMessage(null), 4000);
+    }
+  };
+
+  const handlePull = async () => {
+    if (pulling) return;
+    setPulling(true);
+    setSyncMessage(null);
+    try {
+      const result = await pull();
+      setSyncMessage({ text: result?.summary || "Pulled" });
+    } catch (err) {
+      setSyncMessage({ text: String((err as Error).message || "Pull failed"), error: true });
+    } finally {
+      setPulling(false);
+      setTimeout(() => setSyncMessage(null), 4000);
     }
   };
 
@@ -170,6 +205,31 @@ export function SourceControl() {
           <Check size={14} />
           {committing ? "Committing..." : "Commit"}
         </button>
+        <div className="flex gap-1 mt-1">
+          <button
+            onClick={handlePull}
+            disabled={pulling}
+            className="flex-1 py-1 bg-[#3c3c3c] hover:bg-[#4c4c4c] text-[#cccccc] rounded text-[12px] font-medium disabled:opacity-40 flex items-center justify-center gap-1.5"
+          >
+            <ArrowDownToLine size={13} />
+            {pulling ? "Pulling..." : "Pull"}
+          </button>
+          <button
+            onClick={handlePush}
+            disabled={pushing}
+            className="flex-1 py-1 bg-[#3c3c3c] hover:bg-[#4c4c4c] text-[#cccccc] rounded text-[12px] font-medium disabled:opacity-40 flex items-center justify-center gap-1.5"
+          >
+            <ArrowUpFromLine size={13} />
+            {pushing ? "Pushing..." : "Push"}
+          </button>
+        </div>
+        {syncMessage && (
+          <div className={`mt-1 px-2 py-1 rounded text-[11px] truncate ${
+            syncMessage.error ? "bg-red-900/30 text-red-400" : "bg-green-900/30 text-green-400"
+          }`}>
+            {syncMessage.text}
+          </div>
+        )}
       </div>
 
       {/* File lists */}

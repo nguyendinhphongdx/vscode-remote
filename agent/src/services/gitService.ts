@@ -6,11 +6,11 @@ import type { GitFileStatus, GitStatusEntry } from '@vscode-remote/shared';
 const execFileAsync = promisify(execFile);
 
 async function git(...args: string[]): Promise<string> {
-  const { stdout } = await execFileAsync('git', args, {
+  const { stdout, stderr } = await execFileAsync('git', args, {
     cwd: config.workspaceRoot || undefined,
     maxBuffer: 10 * 1024 * 1024,
   });
-  return stdout;
+  return stdout || stderr;
 }
 
 export async function getStatus(): Promise<{ branch: string; entries: GitStatusEntry[] }> {
@@ -111,6 +111,16 @@ export async function commit(message: string): Promise<{ hash: string; summary: 
     hash: hashMatch?.[1] || '',
     summary: output.split('\n')[0],
   };
+}
+
+export async function push(): Promise<{ summary: string }> {
+  const output = await git('push');
+  return { summary: output.trim() || 'Push completed' };
+}
+
+export async function pull(): Promise<{ summary: string }> {
+  const output = await git('pull');
+  return { summary: output.trim() || 'Already up to date' };
 }
 
 export async function getDiff(filePath: string, staged: boolean): Promise<string> {

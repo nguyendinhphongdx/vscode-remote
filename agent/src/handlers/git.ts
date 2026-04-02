@@ -56,5 +56,15 @@ export async function handleGitMessage(
       sendResponse(ws, id, type, true, { diff });
       break;
     }
+    case MSG.GIT_PUSH: {
+      const result = await gitService.push();
+      sendResponse(ws, id, type, true, result);
+      break;
+    }
+    case MSG.GIT_PULL: {
+      const result = await gitService.pull();
+      sendResponse(ws, id, type, true, result);
+      break;
+    }
   }
 }

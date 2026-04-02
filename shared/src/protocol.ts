@@ -187,6 +187,14 @@ export interface GitDiffResponse {
   diff: string;
 }
 
+export interface GitPushResponse {
+  summary: string;
+}
+
+export interface GitPullResponse {
+  summary: string;
+}
+
 // ============ Workspace Types ============
 
 export interface WorkspaceBrowsePayload {
@@ -287,4 +295,6 @@ export const MSG = {
   GIT_DISCARD: 'git:discard',
   GIT_COMMIT: 'git:commit',
   GIT_DIFF: 'git:diff',
+  GIT_PUSH: 'git:push',
+  GIT_PULL: 'git:pull',
 } as const;

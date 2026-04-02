@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { useWebSocket } from "@/components/providers/WebSocketProvider";
 import { useGitStore } from "@/store/gitStore";
-import { MSG, type GitStatusResponse, type GitCommitResponse } from '@vscode-remote/shared';
+import { MSG, type GitStatusResponse, type GitCommitResponse, type GitPushResponse, type GitPullResponse } from '@vscode-remote/shared';
 
 export function useGit() {
   const { ws } = useWebSocket();
@@ -56,6 +56,20 @@ export function useGit() {
     return result;
   }, [ws, refreshStatus]);
 
+  const push = useCallback(async () => {
+    if (!ws) return null;
+    const result = await ws.send<GitPushResponse>(MSG.GIT_PUSH, {});
+    await refreshStatus();
+    return result;
+  }, [ws, refreshStatus]);
+
+  const pull = useCallback(async () => {
+    if (!ws) return null;
+    const result = await ws.send<GitPullResponse>(MSG.GIT_PULL, {});
+    await refreshStatus();
+    return result;
+  }, [ws, refreshStatus]);
+
   return {
     refreshStatus,
     stageFile,
@@ -64,5 +78,7 @@ export function useGit() {
     unstageAll,
     discardFile,
     commit,
+    push,
+    pull,
   };
 }

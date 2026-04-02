@@ -33,7 +33,7 @@ export function TerminalComponent({ terminalId, isActive }: TerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
-  const { ws } = useWebSocket();
+  const { ws, status } = useWebSocket();
   const { sendInput, resize } = useTerminal();
   const isMobile = useIsMobile();
 
@@ -135,7 +135,12 @@ export function TerminalComponent({ terminalId, isActive }: TerminalProps) {
       style={{ display: isActive ? "flex" : "none" }}
     >
       <div ref={containerRef} className="flex-1 min-h-0" />
-      {isMobile && <MobileTerminalToolbar onKey={handleToolbarKey} />}
+      {isMobile && (
+        <MobileTerminalToolbar
+          onKey={handleToolbarKey}
+          networkStatus={status === "connected" ? "connected" : status === "disconnected" || status === "auth_expired" ? "disconnected" : "connecting"}
+        />
+      )}
     </div>
   );
 }
