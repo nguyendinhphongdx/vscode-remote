@@ -16,7 +16,14 @@ import {
   Code2,
   Eye,
   EyeOff,
+  Download,
+  X,
 } from "lucide-react";
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
 
 function formatMachineId(value: string): string {
   const digits = value.replace(/\D/g, "").slice(0, 9);
@@ -577,7 +584,25 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false);
   const [pkgTab, setPkgTab] = useState<keyof typeof PKG_CMDS>("npm");
   const [osTab, setOsTab] = useState("Linux");
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [showInstallBtn, setShowInstallBtn] = useState(false);
+  const [installDismissed, setInstallDismissed] = useState(false);
   const router = useRouter();
+
+  // Capture PWA install prompt
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as BeforeInstallPromptEvent);
+      setShowInstallBtn(true);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    // Hide if already installed
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setShowInstallBtn(false);
+    }
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
 
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1141,6 +1166,34 @@ export default function LandingPage() {
         </div>
       </footer>
       </div>{/* end content wrapper */}
+
+      {/* PWA Install floating button */}
+      {showInstallBtn && !installDismissed && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4">
+          <button
+            onClick={async () => {
+              if (!installPrompt) return;
+              await installPrompt.prompt();
+              const { outcome } = await installPrompt.userChoice;
+              if (outcome === "accepted") {
+                setShowInstallBtn(false);
+              }
+              setInstallPrompt(null);
+            }}
+            className="flex items-center gap-2.5 px-5 py-3 rounded-full text-white text-sm font-medium shadow-lg shadow-blue-500/25 transition-transform hover:scale-105 active:scale-95"
+            style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)" }}
+          >
+            <Download size={18} />
+            Install App
+          </button>
+          <button
+            onClick={() => setInstallDismissed(true)}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 backdrop-blur text-white/60 hover:text-white hover:bg-white/20 transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
