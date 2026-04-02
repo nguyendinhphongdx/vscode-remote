@@ -1,16 +1,32 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { useWebSocket } from "@/components/providers/WebSocketProvider";
 import { useTerminal } from "@/lib/hooks/useTerminal";
 import { MSG, type TerminalOutputPayload, type TerminalExitEvent } from '@vscode-remote/shared';
+import { MobileTerminalToolbar } from "./MobileTerminalToolbar";
 import "@xterm/xterm/css/xterm.css";
 
 interface TerminalProps {
   terminalId: string;
   isActive: boolean;
+}
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => {
+      setIsMobile(
+        "ontouchstart" in window || window.innerWidth < 768
+      );
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
 }
 
 export function TerminalComponent({ terminalId, isActive }: TerminalProps) {
@@ -19,6 +35,15 @@ export function TerminalComponent({ terminalId, isActive }: TerminalProps) {
   const fitAddonRef = useRef<FitAddon | null>(null);
   const { ws } = useWebSocket();
   const { sendInput, resize } = useTerminal();
+  const isMobile = useIsMobile();
+
+  const handleToolbarKey = useCallback(
+    (data: string) => {
+      sendInput(terminalId, data);
+      xtermRef.current?.focus();
+    },
+    [terminalId, sendInput]
+  );
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -106,9 +131,11 @@ export function TerminalComponent({ terminalId, isActive }: TerminalProps) {
 
   return (
     <div
-      ref={containerRef}
-      className="h-full w-full"
-      style={{ display: isActive ? "block" : "none" }}
-    />
+      className="h-full w-full flex flex-col"
+      style={{ display: isActive ? "flex" : "none" }}
+    >
+      <div ref={containerRef} className="flex-1 min-h-0" />
+      {isMobile && <MobileTerminalToolbar onKey={handleToolbarKey} />}
+    </div>
   );
 }
