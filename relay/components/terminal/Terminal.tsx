@@ -5,7 +5,7 @@ import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { useWebSocket } from "@/components/providers/WebSocketProvider";
 import { useTerminal } from "@/lib/hooks/useTerminal";
-import { MSG, type TerminalOutputPayload, type TerminalExitEvent } from '@vscode-remote/shared';
+import { MSG, type TerminalOutputPayload } from '@vscode-remote/shared';
 import { MobileTerminalToolbar } from "./MobileTerminalToolbar";
 import "@xterm/xterm/css/xterm.css";
 
@@ -40,7 +40,6 @@ export function TerminalComponent({ terminalId, isActive }: TerminalProps) {
   const handleToolbarKey = useCallback(
     (data: string) => {
       sendInput(terminalId, data);
-      xtermRef.current?.focus();
     },
     [terminalId, sendInput]
   );
