@@ -121,9 +121,9 @@ function WaveformVisualizer({ stream }: { stream: MediaStream | null }) {
   return (
     <canvas
       ref={canvasRef}
-      width={300}
-      height={48}
-      className="flex-1 h-12 rounded"
+      width={200}
+      height={32}
+      className="w-full h-full rounded"
     />
   );
 }
@@ -301,9 +301,9 @@ function VoiceMode({ onSubmit, onClose }: VoiceModeProps) {
   };
 
   return (
-    <div className="bg-[#111] border-t border-blue-500/30 px-3 py-3 flex flex-col gap-2">
-      {/* Transcript display */}
-      <div className="min-h-7 px-2 py-1 rounded bg-bg-tertiary text-[14px] font-mono text-text-primary flex items-center justify-between gap-2">
+    <div className="flex flex-col gap-1 h-21">
+      {/* Transcript + countdown */}
+      <div className="flex-1 min-h-0 px-2 py-1 rounded bg-bg-tertiary text-[12px] font-mono text-text-primary flex items-start gap-1 overflow-y-auto">
         <div className="flex-1 min-w-0">
           {transcript || interim ? (
             <>
@@ -312,89 +312,56 @@ function VoiceMode({ onSubmit, onClose }: VoiceModeProps) {
             </>
           ) : (
             <span className="text-text-muted">
-              {isSpeaking ? "Listening..." : "Speak a command..."}
+              {isSpeaking ? "Listening..." : "Speak..."}
             </span>
           )}
         </div>
-
-        {/* Countdown badge */}
         {countdown !== null && (
           <button
-            onPointerDown={(e) => {
-              e.preventDefault();
-              handleCancelCountdown();
-            }}
-            className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 text-[12px] font-mono font-bold shrink-0 active:bg-red-500/30 active:text-red-400"
-            title="Cancel auto-send"
+            onPointerDown={(e) => { e.preventDefault(); handleCancelCountdown(); }}
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 text-[11px] font-mono font-bold shrink-0"
           >
-            <span className="relative flex h-4 w-4 items-center justify-center">
-              {/* Circular countdown */}
-              <svg className="h-4 w-4 -rotate-90" viewBox="0 0 16 16">
-                <circle
-                  cx="8" cy="8" r="6"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeDasharray={2 * Math.PI * 6}
-                  strokeDashoffset={2 * Math.PI * 6 * (1 - countdown / COUNTDOWN_SECONDS)}
-                  className="transition-all duration-1000 ease-linear"
-                />
-              </svg>
-              <span className="absolute text-[9px]">{countdown}</span>
-            </span>
-            Cancel
+            <svg className="h-3.5 w-3.5 -rotate-90" viewBox="0 0 16 16">
+              <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="2"
+                strokeDasharray={2 * Math.PI * 6}
+                strokeDashoffset={2 * Math.PI * 6 * (1 - countdown / COUNTDOWN_SECONDS)}
+                className="transition-all duration-1000 ease-linear"
+              />
+            </svg>
+            {countdown}s
           </button>
         )}
       </div>
 
-      {/* Waveform + controls */}
-      <div className="flex items-center gap-2">
-        {/* Mic indicator */}
+      {/* Controls row */}
+      <div className="flex items-center gap-1 h-10">
         <div
-          className={`p-2 rounded-full ${
-            isSpeaking
-              ? "bg-red-500/20 text-red-400 animate-pulse"
-              : "bg-blue-500/20 text-blue-400"
+          className={`w-8 h-8 flex items-center justify-center rounded-full shrink-0 ${
+            isSpeaking ? "bg-red-500/20 text-red-400 animate-pulse" : "bg-blue-500/20 text-blue-400"
           }`}
         >
-          <Mic size={20} />
+          <Mic size={14} />
         </div>
-
-        {/* Waveform */}
-        <WaveformVisualizer stream={stream} />
-
-        {/* Clear button */}
+        <div className="flex-1 min-w-0 h-8">
+          <WaveformVisualizer stream={stream} />
+        </div>
         <button
-          onPointerDown={(e) => {
-            e.preventDefault();
-            handleClear();
-          }}
-          className="p-2 rounded bg-bg-tertiary text-text-secondary active:bg-yellow-500/30 active:text-yellow-400 shrink-0"
-          title="Clear & re-speak"
+          onPointerDown={(e) => { e.preventDefault(); handleClear(); }}
+          className="w-8 h-8 flex items-center justify-center rounded bg-bg-tertiary text-text-secondary active:bg-yellow-500/30 shrink-0"
         >
-          <Eraser size={18} />
+          <Eraser size={14} />
         </button>
-
-        {/* Submit button */}
         <button
-          onPointerDown={(e) => {
-            e.preventDefault();
-            handleForceSubmit();
-          }}
-          className="px-3 py-2 rounded bg-accent text-white text-[13px] font-medium active:bg-accent-hover shrink-0"
+          onPointerDown={(e) => { e.preventDefault(); handleForceSubmit(); }}
+          className="h-8 px-2.5 rounded bg-accent text-white text-[12px] font-medium active:bg-accent-hover shrink-0"
         >
           Send
         </button>
-
-        {/* Close button */}
         <button
-          onPointerDown={(e) => {
-            e.preventDefault();
-            handleClose();
-          }}
-          className="p-2 rounded bg-bg-tertiary text-text-secondary active:bg-red-500/30 active:text-red-400 shrink-0"
+          onPointerDown={(e) => { e.preventDefault(); handleClose(); }}
+          className="w-8 h-8 flex items-center justify-center rounded bg-bg-tertiary text-text-secondary active:bg-red-500/30 shrink-0"
         >
-          <X size={18} />
+          <X size={14} />
         </button>
       </div>
     </div>

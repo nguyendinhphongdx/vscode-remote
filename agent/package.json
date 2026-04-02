@@ -1,6 +1,6 @@
 {
   "name": "opencode-remote",
-  "version": "0.3.16",
+  "version": "0.3.17",
   "type": "module",
   "description": "OpenCode — access your dev environment from anywhere",
   "bin": {
