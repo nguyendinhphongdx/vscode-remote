@@ -1,6 +1,6 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
-import { forwardLoginToAgent } from "../agentBridge.js";
+import { forwardLoginToAgent, forwardOtpVerifyToAgent } from "../agentBridge.js";
 
 export function createAuthRouter(): Router {
   const router = Router();
@@ -22,6 +22,22 @@ export function createAuthRouter(): Router {
     }
 
     const result = await forwardLoginToAgent(machineId, password);
+    if (result.success) {
+      res.json(result.payload);
+    } else {
+      res.status(401).json({ error: result.error });
+    }
+  });
+
+  // POST /api/auth/otp-verify — forward OTP verification to agent
+  router.post("/otp-verify", loginLimiter, async (req, res) => {
+    const { machineId, otpSession, code } = req.body;
+    if (!machineId || !otpSession || !code) {
+      res.status(400).json({ error: "machineId, otpSession, and code required" });
+      return;
+    }
+
+    const result = await forwardOtpVerifyToAgent(machineId, otpSession, code);
     if (result.success) {
       res.json(result.payload);
     } else {

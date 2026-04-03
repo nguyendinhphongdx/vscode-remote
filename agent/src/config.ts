@@ -33,10 +33,13 @@ export const config: AgentSettings & { machineId: string } = new Proxy(
     get(_target, prop: string) {
       const store = configStore.get();
       if (prop === 'machineId') return store.machineId;
-      // Env/build-time values override persisted config
+      // Persisted config takes priority if user has changed it
+      const persisted = (store.settings as unknown as Record<string, unknown>)[prop];
+      if (persisted !== undefined && persisted !== null && persisted !== '') return persisted;
+      // Fallback to env/build-time values
       const envOverride = ENV_OVERRIDES[prop]?.();
       if (envOverride) return envOverride;
-      return (store.settings as unknown as Record<string, unknown>)[prop];
+      return persisted;
     },
   }
 );

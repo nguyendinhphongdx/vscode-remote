@@ -3,7 +3,7 @@ declare const __BUILD_RELAY_URL__: string;
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
-import type { PersistedConfig, AgentSettings } from '../types/config.types.js';
+import type { PersistedConfig, AgentSettings, TotpConfig } from '../types/config.types.js';
 import { generateMachineId } from './machineId.js';
 import { generateRandomPassword, hashPassword } from './passwordService.js';
 
@@ -36,6 +36,7 @@ async function createDefaultConfig(): Promise<PersistedConfig> {
       random: { hash: randomHash, displayValue: randomPassword },
       fixed: null,
     },
+    totp: null,
     settings: {
       relayUrl: process.env.RELAY_URL || __BUILD_RELAY_URL__ || '',
       localPort: parseInt(process.env.LOCAL_PORT || '9000', 10),
@@ -57,6 +58,11 @@ export async function initialize(): Promise<void> {
   try {
     const data = await fs.readFile(CONFIG_PATH, 'utf-8');
     currentConfig = JSON.parse(data) as PersistedConfig;
+    // Migrate: add totp field if missing (existing configs before 2FA feature)
+    if (currentConfig.totp === undefined) {
+      currentConfig.totp = null;
+      await writeConfig(currentConfig);
+    }
   } catch {
     currentConfig = await createDefaultConfig();
     await writeConfig(currentConfig);
@@ -111,4 +117,42 @@ export async function clearFixedPassword(): Promise<void> {
   const config = get();
   config.passwords.fixed = null;
   await writeConfig(config);
+}
+
+// ===== TOTP / 2FA =====
+
+export function getTotpConfig(): TotpConfig | null {
+  return get().totp;
+}
+
+export function isTotpEnabled(): boolean {
+  return get().totp !== null;
+}
+
+export async function enableTotp(secret: string, backupCodes: string[]): Promise<void> {
+  const config = get();
+  config.totp = {
+    secret,
+    backupCodes,
+    enabledAt: new Date().toISOString(),
+  };
+  await writeConfig(config);
+}
+
+export async function disableTotp(): Promise<void> {
+  const config = get();
+  config.totp = null;
+  await writeConfig(config);
+}
+
+export async function consumeBackupCode(code: string): Promise<boolean> {
+  const config = get();
+  if (!config.totp) return false;
+
+  const idx = config.totp.backupCodes.indexOf(code);
+  if (idx === -1) return false;
+
+  config.totp.backupCodes.splice(idx, 1);
+  await writeConfig(config);
+  return true;
 }

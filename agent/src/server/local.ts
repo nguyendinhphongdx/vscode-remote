@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { config, configStore } from '../config.js';
 import type { RelayClient } from '../relay/relayClient.js';
 import { logger } from '../utils/logger.js';
+import { generateSecret, generateBackupCodes, verifyCode, generateQRCode } from '../services/totpService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // dev (tsx): __dirname = src/server/ → ../../ui
@@ -29,6 +30,7 @@ export function createLocalServer(relayClient: RelayClient): void {
       machineId: store.machineId,
       password: store.passwords.random?.displayValue || null,
       hasFixedPassword: store.passwords.fixed !== null,
+      totpEnabled: store.totp !== null,
       relayConnected: relayClient.isConnected(),
       relayUrl: config.relayUrl,
       workspaceRoot: config.workspaceRoot,
@@ -43,8 +45,10 @@ export function createLocalServer(relayClient: RelayClient): void {
       return;
     }
 
-    // Build the relay editor URL
-    const relayHttpUrl = config.relayUrl
+    // Build the relay editor URL from persisted settings (not env override)
+    const store = configStore.get();
+    const actualRelayUrl = store.settings.relayUrl || config.relayUrl;
+    const relayHttpUrl = actualRelayUrl
       .replace('ws://', 'http://')
       .replace('wss://', 'https://')
       .replace('/api/agent-ws', '');
@@ -95,6 +99,71 @@ export function createLocalServer(relayClient: RelayClient): void {
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
     }
+  });
+
+  // ===== TOTP / 2FA APIs =====
+
+  // GET /api/totp/status — check if TOTP is enabled + backup codes remaining
+  app.get('/api/totp/status', (_req, res) => {
+    const totpConfig = configStore.getTotpConfig();
+    res.json({
+      enabled: totpConfig !== null,
+      backupCodesRemaining: totpConfig?.backupCodes.length ?? 0,
+    });
+  });
+
+  // POST /api/totp/setup — generate new secret + QR code (does NOT enable yet)
+  app.post('/api/totp/setup', async (_req, res) => {
+    try {
+      const store = configStore.get();
+      const secret = generateSecret();
+      const qrCode = await generateQRCode(secret, store.machineId);
+      const backupCodes = generateBackupCodes();
+      res.json({ secret, qrCode, backupCodes });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  // POST /api/totp/enable — verify a code then enable TOTP
+  app.post('/api/totp/enable', async (req, res) => {
+    const { secret, code, backupCodes } = req.body;
+    if (!secret || !code || !backupCodes) {
+      res.status(400).json({ error: 'secret, code, and backupCodes are required' });
+      return;
+    }
+
+    const store = configStore.get();
+    const valid = verifyCode(secret, code, store.machineId);
+    if (!valid) {
+      res.status(400).json({ error: 'Invalid verification code. Make sure your authenticator is synced.' });
+      return;
+    }
+
+    await configStore.enableTotp(secret, backupCodes);
+    logger.info('TOTP 2FA enabled');
+    res.json({ success: true });
+  });
+
+  // POST /api/totp/disable — disable TOTP (requires current password)
+  app.post('/api/totp/disable', async (req, res) => {
+    const { password } = req.body;
+    if (!password) {
+      res.status(400).json({ error: 'Password is required to disable 2FA' });
+      return;
+    }
+
+    const store = configStore.get();
+    const { verifyPassword } = await import('../services/passwordService.js');
+    const valid = await verifyPassword(password, store.passwords);
+    if (!valid) {
+      res.status(401).json({ error: 'Invalid password' });
+      return;
+    }
+
+    await configStore.disableTotp();
+    logger.info('TOTP 2FA disabled');
+    res.json({ success: true });
   });
 
   // API: list docs

@@ -31,6 +31,37 @@ export function forwardLoginToAgent(
   });
 }
 
+export function forwardOtpVerifyToAgent(
+  machineId: string,
+  otpSession: string,
+  code: string
+): Promise<{ success: boolean; payload?: unknown; error?: string }> {
+  return new Promise((resolve) => {
+    const agent = agents.get(machineId);
+    if (!agent) {
+      resolve({ success: false, error: "Agent offline" });
+      return;
+    }
+
+    const id = uuid();
+    const timeout = setTimeout(() => {
+      pendingHttpRequests.delete(id);
+      resolve({ success: false, error: "Agent timeout" });
+    }, 10000);
+
+    pendingHttpRequests.set(id, (response) => {
+      clearTimeout(timeout);
+      resolve(response as { success: boolean; payload?: unknown; error?: string });
+    });
+
+    agent.ws.send(JSON.stringify({
+      id,
+      type: "auth:otp:verify",
+      payload: { machineId, otpSession, code },
+    }));
+  });
+}
+
 export function verifyTokenViaAgent(
   machineId: string,
   token: string

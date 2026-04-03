@@ -231,6 +231,19 @@ export interface AuthLoginPayload {
 export interface AuthLoginResponse {
   token: string;
   expiresAt: number;
+  requireOtp?: boolean;    // true = password OK but need OTP step
+  otpSession?: string;     // temporary session ID for OTP verification
+}
+
+export interface AuthOtpVerifyPayload {
+  machineId: string;
+  otpSession: string;      // session ID from login response
+  code: string;            // 6-digit TOTP code
+}
+
+export interface AuthOtpVerifyResponse {
+  token: string;
+  expiresAt: number;
 }
 
 // ============ Relay Types ============
@@ -249,6 +262,7 @@ export interface AgentRegisteredPayload {
 export const MSG = {
   // Auth
   AUTH_LOGIN: 'auth:login',
+  AUTH_OTP_VERIFY: 'auth:otp:verify',
   AUTH_VERIFY: 'auth:verify',
 
   // Relay
