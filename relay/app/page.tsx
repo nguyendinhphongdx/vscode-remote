@@ -1258,11 +1258,14 @@ export default function LandingPage() {
             <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)" }}>
               <Code2 size={12} className="text-white" />
             </div>
-            <span className="text-xs font-medium" style={{ color: "#52525b" }}>VS Code Remote</span>
+            <span className="text-xs font-medium" style={{ color: "#52525b" }}>OpenCode Remote</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(139,92,246,0.15)", color: "#8b5cf6" }}>v0.3.18</span>
           </div>
-          <p className="text-xs" style={{ color: "#3f3f46" }}>
-            Secure remote development environment
-          </p>
+          <div className="flex items-center gap-4">
+            <a href="https://www.npmjs.com/package/@hanoilab/opencode" target="_blank" rel="noopener noreferrer" className="text-xs hover:underline" style={{ color: "#52525b" }}>npm</a>
+            <a href="https://github.com/nguyendinhphongdx/vscode-remote" target="_blank" rel="noopener noreferrer" className="text-xs hover:underline" style={{ color: "#52525b" }}>GitHub</a>
+            <span className="text-xs" style={{ color: "#3f3f46" }}>&copy; {new Date().getFullYear()} HanoiLab</span>
+          </div>
         </div>
       </footer>
       </div>{/* end content wrapper */}
