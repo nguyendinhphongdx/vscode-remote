@@ -166,6 +166,11 @@ function VoiceMode({ onSubmit, onClose }: VoiceModeProps) {
             setTranscript("");
             setInterim("");
             pendingTextRef.current = "";
+            // Restart recognition to clear accumulated results
+            if (recognitionRef.current) {
+              recognitionRef.current.stop();
+              // onend handler will auto-restart
+            }
           }
         } else {
           setCountdown(remaining);
@@ -286,6 +291,11 @@ function VoiceMode({ onSubmit, onClose }: VoiceModeProps) {
       onSubmit(text);
       setTranscript("");
       setInterim("");
+      pendingTextRef.current = "";
+      // Restart recognition to clear accumulated results
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
     }
   };
 
