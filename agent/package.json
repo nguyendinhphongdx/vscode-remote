@@ -1,8 +1,11 @@
 {
-  "name": "opencode-remote",
-  "version": "0.3.17",
+  "name": "@hanoilab/opencode",
+  "version": "0.3.18",
   "type": "module",
   "description": "OpenCode — access your dev environment from anywhere",
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "opencode": "./dist/cli.js"
   },

@@ -46,7 +46,7 @@ See [Environment Variables](#environment-variables) for full list.
 ```
 vscode-remote/                  npm workspaces monorepo
 ├── shared/                     @vscode-remote/shared — protocol types & MSG constants
-├── agent/                      opencode-remote — npm package, runs on host machine
+├── agent/                      @hanoilab/opencode — npm package, runs on host machine
 ├── relay/                      Next.js + Express relay server
 ├── package.json                Root workspace config
 ├── .env                        Shared env vars (git-ignored)
@@ -479,7 +479,7 @@ npm run lint                    # ESLint
 npm run publish:agent
 ```
 
-Users install with: `npm install -g opencode-remote`
+Users install with: `npm install -g @hanoilab/opencode`
 
 ## Adding a New Feature
 

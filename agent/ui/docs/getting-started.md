@@ -8,7 +8,7 @@ VS Code Remote cho phép truy cập môi trường phát triển từ xa thông 
 Browser (Editor) ←→ Relay Server ←→ Agent (Máy host)
 ```
 
-- **Agent** (`opencode-remote`) — chạy trên máy host, cung cấp file system, terminal, git
+- **Agent** (`@hanoilab/opencode`) — chạy trên máy host, cung cấp file system, terminal, git
 - **Relay** — server trung gian, proxy WebSocket giữa browser và agent
 - **Browser Editor** — giao diện VS Code chạy trên trình duyệt
 
@@ -17,7 +17,7 @@ Browser (Editor) ←→ Relay Server ←→ Agent (Máy host)
 ### Từ npm (khuyến nghị)
 
 ```bash
-npm install -g opencode-remote
+npm install -g @hanoilab/opencode
 ```
 
 ### Từ source

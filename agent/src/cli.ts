@@ -352,7 +352,7 @@ function cmdUninstall() {
 
 function cmdUpgrade() {
   const target = args[0] || 'latest';
-  const pkg = 'opencode-remote';
+  const pkg = '@hanoilab/opencode';
 
   console.log(`Upgrading ${pkg} to ${target}...`);
 
@@ -385,7 +385,7 @@ function cmdUpgrade() {
   console.log('Upgrade complete.');
   // Show new version
   try {
-    const ver = execSync(`${pkg === 'opencode-remote' ? 'opencode' : pkg} --version`, { encoding: 'utf-8' }).trim();
+    const ver = execSync('opencode --version', { encoding: 'utf-8' }).trim();
     console.log(`  Version: ${ver}`);
   } catch { /* ignore */ }
 
@@ -435,9 +435,9 @@ function cmdPurge() {
   }
 
   // 4. Uninstall npm package
-  console.log('Uninstalling opencode-remote globally...');
+  console.log('Uninstalling @hanoilab/opencode globally...');
   try {
-    execSync('npm uninstall -g opencode-remote', { stdio: 'inherit' });
+    execSync('npm uninstall -g @hanoilab/opencode', { stdio: 'inherit' });
   } catch {
     console.log('Could not uninstall package (may not be installed globally).');
   }

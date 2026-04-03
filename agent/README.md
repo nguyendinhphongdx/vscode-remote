@@ -1,4 +1,4 @@
-# opencode-remote
+# @hanoilab/opencode
 
 Access your dev environment from anywhere. Full VS Code experience in the browser — terminal, file explorer, git, and port forwarding.
 
@@ -6,7 +6,7 @@ Access your dev environment from anywhere. Full VS Code experience in the browse
 
 ```bash
 # Install globally
-npm i -g opencode-remote
+npm i -g @hanoilab/opencode
 
 # Start the agent
 opencode start
@@ -71,7 +71,7 @@ The agent runs on your machine and connects to a relay server via WebSocket. You
 
 ## Configuration
 
-Config is stored at `~/.opencode-remote/config.json`. You can change the relay server URL from the admin panel or by editing the config file directly.
+Config is stored at `~/.@hanoilab/opencode/config.json`. You can change the relay server URL from the admin panel or by editing the config file directly.
 
 ## License
 

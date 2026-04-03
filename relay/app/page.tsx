@@ -571,9 +571,9 @@ function GuideSection() {
 }
 
 const PKG_CMDS = {
-  npm:  { prefix: "npm i -g",        pkg: "opencode-remote@latest" },
-  pnpm: { prefix: "pnpm add -g",     pkg: "opencode-remote@latest" },
-  yarn: { prefix: "yarn global add", pkg: "opencode-remote" },
+  npm:  { prefix: "npm i -g",        pkg: "@hanoilab/opencode@latest" },
+  pnpm: { prefix: "pnpm add -g",     pkg: "@hanoilab/opencode@latest" },
+  yarn: { prefix: "yarn global add", pkg: "@hanoilab/opencode" },
 } as const;
 
 export default function LandingPage() {

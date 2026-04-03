@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/opencode-remote"><img src="https://img.shields.io/npm/v/opencode-remote?style=flat-square&color=cb3837&label=npm" alt="npm" /></a>
+  <a href="https://www.npmjs.com/package/@hanoilab/opencode"><img src="https://img.shields.io/npm/v/@hanoilab/opencode?style=flat-square&color=cb3837&label=npm" alt="npm" /></a>
   <img src="https://img.shields.io/badge/node-%3E%3D20.0.0-339933?style=flat-square&logo=node.js&logoColor=white" alt="node" />
   <img src="https://img.shields.io/badge/next.js-16-000000?style=flat-square&logo=next.js" alt="Next.js" />
   <img src="https://img.shields.io/badge/PWA-ready-5A0FC8?style=flat-square&logo=pwa&logoColor=white" alt="PWA" />
@@ -49,7 +49,7 @@ Phone / Tablet / Laptop            Relay Server (VPS)               Your Dev Mac
 ### 1. Install the agent
 
 ```bash
-npm i -g opencode-remote
+npm i -g @hanoilab/opencode
 ```
 
 ### 2. Run it

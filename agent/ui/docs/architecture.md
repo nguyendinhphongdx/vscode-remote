@@ -15,7 +15,7 @@ VS Code Remote sử dụng kiến trúc **Relay** để kết nối browser vớ
 
 ### Agent (Máy host)
 
-Chạy trên máy cần truy cập từ xa. Package npm: `opencode-remote`. Cung cấp:
+Chạy trên máy cần truy cập từ xa. Package npm: `@hanoilab/opencode`. Cung cấp:
 
 | Module | Chức năng |
 |--------|-----------|
