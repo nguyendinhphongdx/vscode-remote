@@ -25,5 +25,5 @@ export function generateMachineId(): string {
   const num = BigInt('0x' + hash.slice(0, 16)) % 1000000000n;
   const digits = num.toString().padStart(9, '0');
 
-  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 9)}`;
+  return digits;
 }

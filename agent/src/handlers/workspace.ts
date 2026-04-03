@@ -2,7 +2,7 @@ import type { WebSocket } from 'ws';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import { MSG } from '../protocol.js';
+import { MSG } from '@vscode-remote/shared';
 import { config, configStore } from '../config.js';
 import { sendResponse } from './router.js';
 import { logger } from '../utils/logger.js';
@@ -18,7 +18,7 @@ export async function handleWorkspaceMessage(
       const root = config.workspaceRoot;
       sendResponse(ws, id, type, true, {
         workspaceRoot: root,
-        folderName: path.basename(root),
+        folderName: root ? path.basename(root) : null,
       });
       break;
     }

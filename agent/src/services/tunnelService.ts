@@ -1,5 +1,11 @@
-import { spawn, type ChildProcess } from 'child_process';
+import { spawn, execFile, type ChildProcess } from 'child_process';
+import { promisify } from 'util';
+import fs from 'fs/promises';
+import path from 'path';
+import os from 'os';
 import { logger } from '../utils/logger.js';
+
+const execFileAsync = promisify(execFile);
 
 interface TunnelInfo {
   port: number;
@@ -10,23 +16,57 @@ interface TunnelInfo {
 
 const tunnels = new Map<number, TunnelInfo>();
 
-/**
- * Check if devtunnel CLI is available
- */
-export async function isDevTunnelAvailable(): Promise<boolean> {
-  return new Promise((resolve) => {
-    const proc = spawn('devtunnel', ['--version'], { stdio: 'pipe' });
-    proc.on('error', () => resolve(false));
-    proc.on('close', (code) => resolve(code === 0));
-  });
+function getCloudflaredPath(): string {
+  const localBin = path.join(os.homedir(), '.local', 'bin', 'cloudflared');
+  return localBin;
 }
 
 /**
- * Create a dev tunnel for a local port.
- * Spawns `devtunnel host -p <port> --allow-anonymous` and parses the tunnel URL from stdout.
+ * Check if cloudflared is available, install if not
+ */
+async function ensureCloudflared(): Promise<string> {
+  // Try system-wide first
+  try {
+    await execFileAsync('cloudflared', ['--version']);
+    return 'cloudflared';
+  } catch {
+    // Not in PATH
+  }
+
+  // Try local bin
+  const localPath = getCloudflaredPath();
+  try {
+    await fs.access(localPath);
+    await execFileAsync(localPath, ['--version']);
+    return localPath;
+  } catch {
+    // Not installed locally
+  }
+
+  // Auto-install to ~/.local/bin
+  logger.info('cloudflared not found, installing...');
+  const binDir = path.join(os.homedir(), '.local', 'bin');
+  await fs.mkdir(binDir, { recursive: true });
+
+  const arch = os.arch() === 'arm64' ? 'arm64' : 'amd64';
+  const url = `https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${arch}`;
+
+  try {
+    await execFileAsync('curl', ['-sL', url, '-o', localPath], { timeout: 60000 });
+    await fs.chmod(localPath, 0o755);
+    logger.info('cloudflared installed successfully');
+    return localPath;
+  } catch (err) {
+    throw new Error(`Failed to install cloudflared: ${(err as Error).message}`);
+  }
+}
+
+/**
+ * Create a Cloudflare Tunnel for a local port.
+ * Spawns `cloudflared tunnel --url http://localhost:<port>` and parses the tunnel URL from output.
  */
 export function createTunnel(port: number): Promise<string> {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     if (tunnels.has(port)) {
       const existing = tunnels.get(port)!;
       if (existing.url) {
@@ -35,7 +75,15 @@ export function createTunnel(port: number): Promise<string> {
       }
     }
 
-    const proc = spawn('devtunnel', ['host', '-p', String(port), '--allow-anonymous'], {
+    let bin: string;
+    try {
+      bin = await ensureCloudflared();
+    } catch (err) {
+      reject(err);
+      return;
+    }
+
+    const proc = spawn(bin, ['tunnel', '--url', `http://localhost:${port}`], {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
@@ -46,19 +94,18 @@ export function createTunnel(port: number): Promise<string> {
     const timeout = setTimeout(() => {
       if (!resolved) {
         resolved = true;
-        // Even if we didn't get URL yet, tunnel might still be starting
         reject(new Error('Tunnel creation timed out after 30s'));
       }
     }, 30000);
 
     const handleOutput = (data: Buffer) => {
       const text = data.toString();
-      logger.info(`[devtunnel:${port}] ${text.trim()}`);
 
-      // devtunnel outputs URL like: "Connect via browser: https://xxxxx.asse.devtunnels.ms"
-      // or "Your url is: https://xxxxx.devtunnels.ms:PORT"
-      // Match any https URL containing devtunnels
-      const urlMatch = text.match(/(https:\/\/[^\s]+devtunnels[^\s]*)/);
+      // cloudflared outputs URL on stderr like:
+      // "INF +----------------------------+"
+      // "INF |  https://xxx.trycloudflare.com |"
+      // Or: "INF Registered tunnel connection ... url=https://xxx.trycloudflare.com"
+      const urlMatch = text.match(/(https:\/\/[a-z0-9-]+\.trycloudflare\.com)/);
       if (urlMatch && !resolved) {
         resolved = true;
         clearTimeout(timeout);
@@ -78,7 +125,7 @@ export function createTunnel(port: number): Promise<string> {
       info.status = 'error';
       if (!resolved) {
         resolved = true;
-        reject(new Error(`Failed to start devtunnel: ${err.message}`));
+        reject(new Error(`Failed to start cloudflared: ${err.message}`));
       }
     });
 
@@ -88,15 +135,12 @@ export function createTunnel(port: number): Promise<string> {
       tunnels.delete(port);
       if (!resolved) {
         resolved = true;
-        reject(new Error(`devtunnel exited with code ${code}`));
+        reject(new Error(`cloudflared exited with code ${code}`));
       }
     });
   });
 }
 
-/**
- * Close a tunnel for a specific port
- */
 export function closeTunnel(port: number): void {
   const info = tunnels.get(port);
   if (info) {
@@ -106,16 +150,10 @@ export function closeTunnel(port: number): void {
   }
 }
 
-/**
- * Get tunnel URL for a port (null if not tunneled)
- */
 export function getTunnelUrl(port: number): string | null {
   return tunnels.get(port)?.url ?? null;
 }
 
-/**
- * Get all active tunnels info
- */
 export function getActiveTunnels(): { port: number; url: string | null; status: string }[] {
   return Array.from(tunnels.values()).map((t) => ({
     port: t.port,
@@ -124,9 +162,6 @@ export function getActiveTunnels(): { port: number; url: string | null; status: 
   }));
 }
 
-/**
- * Close all tunnels (for graceful shutdown)
- */
 export function closeAllTunnels(): void {
   for (const [port] of tunnels) {
     closeTunnel(port);

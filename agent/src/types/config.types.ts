@@ -1,6 +1,6 @@
 export interface PasswordEntry {
   hash: string;
-  displayValue: string;
+  displayValue?: string;
 }
 
 export interface PersistedConfig {
@@ -15,11 +15,10 @@ export interface PersistedConfig {
 }
 
 export interface AgentSettings {
-  port: number;
-  workspaceRoot: string;
-  maxConnections: number;
+  relayUrl: string;
+  localPort: number;
+  workspaceRoot: string | null;
   maxTerminals: number;
   maxFileSize: number;
-  allowedOrigins: string[];
   jwtSecret: string;
 }

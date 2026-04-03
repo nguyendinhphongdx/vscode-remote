@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { resolveSafePathWithSymlink } from '../utils/pathSecurity.js';
 import { config } from '../config.js';
-import type { FileEntry } from '../protocol.js';
+import type { FileEntry } from '@vscode-remote/shared';
 
 export async function listDirectory(dirPath: string): Promise<FileEntry[]> {
   const resolved = await resolveSafePathWithSymlink(dirPath);
@@ -12,7 +12,7 @@ export async function listDirectory(dirPath: string): Promise<FileEntry[]> {
   for (const entry of entries) {
     // Skip hidden files starting with .
     const fullPath = path.join(resolved, entry.name);
-    const relativePath = path.relative(config.workspaceRoot, fullPath);
+    const relativePath = path.relative(config.workspaceRoot!, fullPath);
     const stat = await fs.stat(fullPath).catch(() => null);
 
     result.push({

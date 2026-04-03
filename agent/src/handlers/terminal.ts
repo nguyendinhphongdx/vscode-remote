@@ -1,11 +1,11 @@
 import type { WebSocket } from 'ws';
-import { MSG } from '../protocol.js';
+import { MSG } from '@vscode-remote/shared';
 import type {
   TerminalCreatePayload,
   TerminalInputPayload,
   TerminalResizePayload,
   TerminalClosePayload,
-} from '../protocol.js';
+} from '@vscode-remote/shared';
 import * as ptyService from '../services/ptyService.js';
 import { sendResponse, sendEvent } from './router.js';
 
@@ -16,6 +16,12 @@ export async function handleTerminalMessage(
   payload: unknown
 ): Promise<void> {
   switch (type) {
+    case MSG.TERMINAL_SHELLS: {
+      const shells = ptyService.getAvailableShells();
+      const defaultShell = shells[0]?.path || '';
+      sendResponse(ws, id, type, true, { shells, default: defaultShell });
+      break;
+    }
     case MSG.TERMINAL_CREATE: {
       const { cols, rows, shell } = payload as TerminalCreatePayload;
       const terminalId = ptyService.createTerminal(

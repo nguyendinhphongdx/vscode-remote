@@ -1,41 +1,54 @@
-import http from 'http';
+declare const __BUILD_RELAY_SECRET__: string;
+
 import { config, configStore } from './config.js';
-import { createHttpServer } from './server/http.js';
-import { createWebSocketServer } from './server/websocket.js';
-import { startWatcher, stopWatcher } from './services/watcherService.js';
+import { RelayClient } from './relay/relayClient.js';
+import { createLocalServer } from './server/local.js';
+import { stopWatcher, onFileChange } from './services/watcherService.js';
 import { closeAllTerminals } from './services/ptyService.js';
-import { closeAllTunnels } from './services/tunnelService.js';
+import { MSG } from '@vscode-remote/shared';
 import { logger } from './utils/logger.js';
 
 async function main() {
-  // Initialize persistent config (machine ID, passwords, settings)
   await configStore.initialize();
 
   const store = configStore.get();
-  logger.info('='.repeat(50));
-  logger.info(`Machine ID : ${store.machineId}`);
-  if (store.passwords.random) {
-    logger.info(`Password   : ${store.passwords.random.displayValue}`);
-  }
-  logger.info('='.repeat(50));
+  const mid = store.machineId;
 
-  const app = createHttpServer();
-  const server = http.createServer(app);
-  createWebSocketServer(server);
-  startWatcher();
+  const formattedId = `${mid.slice(0,3)}-${mid.slice(3,6)}-${mid.slice(6)}`;
+  logger.info('='.repeat(40));
+  logger.info(`  Machine ID : ${formattedId}`);
+  const pw = configStore.getRandomPassword();
+  logger.info(`  Password   : ${pw || '(none — use fixed password)'}`)
+  logger.info(`  Relay      : ${config.relayUrl}`);
+  const secret = process.env.RELAY_SECRET || __BUILD_RELAY_SECRET__;
+  logger.info(`  Secret     : ${secret ? '***configured***' : '⚠ NOT SET'}`);
+  logger.info('='.repeat(40));
 
-  server.listen(config.port, () => {
-    logger.info(`Agent running on port ${config.port}`);
+  // Create relay client (outbound WS to relay server)
+  const relayClient = new RelayClient(config.relayUrl, store.machineId);
+
+  // Forward file watch events to relay
+  onFileChange((event) => relayClient.sendEvent(MSG.FS_WATCH_EVENT, event));
+
+  // Connect to relay
+  relayClient.connect();
+
+  // Start local HTTP server (agent UI at localhost)
+  createLocalServer(relayClient);
+
+  if (config.workspaceRoot) {
     logger.info(`Workspace: ${config.workspaceRoot}`);
-  });
+  } else {
+    logger.info('No workspace folder set (will be selected from browser)');
+  }
 
   // Graceful shutdown
   const shutdown = () => {
-    logger.info('Shutting down.......');
+    logger.info('Shutting down...');
     closeAllTerminals();
-    closeAllTunnels();
     stopWatcher();
-    server.close(() => process.exit(0));
+    relayClient.disconnect();
+    process.exit(0);
   };
 
   process.on('SIGINT', shutdown);

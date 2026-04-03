@@ -1,0 +1,20 @@
+{
+  "machineId": "165143086",
+  "passwords": {
+    "random": {
+      "hash": "$2b$10$MjA7UfAG.ZIhTlLBWcuHP.KszPzxb3x15vZq0/LAJlbev7LdYGVB6",
+      "displayValue": "fH2t8GN2"
+    },
+    "fixed": null
+  },
+  "settings": {
+    "relayUrl": "ws://localhost:9001/api/agent-ws",
+    "localPort": 9000,
+    "workspaceRoot": "/home/dinhphong/Documents/Cá nhân/vscode-remote",
+    "maxTerminals": 5,
+    "maxFileSize": 10485760,
+    "jwtSecret": "32d922ea9a8cf838a9a13abc2604e90586c3a359d97bebf39247a1c927d539507f463d79bed85e8a7e19490a7bd4ea2fb193804b98ac7deaed3dc1b94c3005aa"
+  },
+  "createdAt": "2026-03-27T09:28:55.303Z",
+  "updatedAt": "2026-03-27T09:28:55.303Z"
+}

@@ -1,6 +1,6 @@
 import type { WebSocket } from 'ws';
-import { MSG } from '../protocol.js';
-import type { GitStagePayload, GitCommitPayload, GitDiffPayload } from '../protocol.js';
+import { MSG } from '@vscode-remote/shared';
+import type { GitStagePayload, GitCommitPayload, GitDiffPayload } from '@vscode-remote/shared';
 import * as gitService from '../services/gitService.js';
 import { sendResponse } from './router.js';
 
@@ -54,6 +54,16 @@ export async function handleGitMessage(
       const { path, staged } = payload as GitDiffPayload;
       const diff = await gitService.getDiff(path, staged);
       sendResponse(ws, id, type, true, { diff });
+      break;
+    }
+    case MSG.GIT_PUSH: {
+      const result = await gitService.push();
+      sendResponse(ws, id, type, true, result);
+      break;
+    }
+    case MSG.GIT_PULL: {
+      const result = await gitService.pull();
+      sendResponse(ws, id, type, true, result);
       break;
     }
   }

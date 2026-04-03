@@ -1,10 +1,25 @@
 import type { WebSocket } from 'ws';
-import { MSG } from '../protocol.js';
-import type { PortForwardPayload } from '../protocol.js';
+import { MSG } from '@vscode-remote/shared';
+import type { PortForwardPayload } from '@vscode-remote/shared';
 import * as portService from '../services/portService.js';
 import * as tunnelService from '../services/tunnelService.js';
 import { sendResponse } from './router.js';
 import { logger } from '../utils/logger.js';
+
+// Ports that should never be forwarded (security-sensitive services)
+const PORT_BLACKLIST = new Set([
+  22,    // SSH
+  23,    // Telnet
+  25,    // SMTP
+  53,    // DNS
+  135,   // MSRPC
+  139,   // NetBIOS
+  445,   // SMB
+  3306,  // MySQL
+  5432,  // PostgreSQL
+  6379,  // Redis
+  27017, // MongoDB
+]);
 
 // Track which ports are being forwarded
 const forwardedPorts = new Set<number>();
@@ -27,7 +42,6 @@ export async function handlePortMessage(
     case MSG.PORT_LIST: {
       const ports = await portService.getListeningPorts();
       const forwarded = Array.from(forwardedPorts);
-      // Include tunnel URLs for each forwarded port
       const tunnelUrls: Record<number, string | null> = {};
       for (const port of forwarded) {
         tunnelUrls[port] = tunnelService.getTunnelUrl(port);
@@ -37,18 +51,20 @@ export async function handlePortMessage(
     }
     case MSG.PORT_FORWARD: {
       const { port } = payload as PortForwardPayload;
-      forwardedPorts.add(port);
-      logger.info(`Port forwarded: ${port}`);
-
-      // Try to create a devtunnel
-      let tunnelUrl: string | null = null;
-      try {
-        tunnelUrl = await tunnelService.createTunnel(port);
-      } catch (err) {
-        logger.warn(`Failed to create tunnel for port ${port}: ${(err as Error).message}`);
+      if (PORT_BLACKLIST.has(port)) {
+        sendResponse(ws, id, type, false, { error: `Port ${port} is blacklisted for security reasons` });
+        break;
       }
-
-      sendResponse(ws, id, type, true, { port, tunnelUrl });
+      try {
+        const tunnelUrl = await tunnelService.createTunnel(port);
+        forwardedPorts.add(port);
+        logger.info(`Port forwarded: ${port} → ${tunnelUrl}`);
+        sendResponse(ws, id, type, true, { port, tunnelUrl });
+      } catch (err) {
+        const message = (err as Error).message;
+        logger.warn(`Failed to create tunnel for port ${port}: ${message}`);
+        sendResponse(ws, id, type, false, { error: message });
+      }
       break;
     }
     case MSG.PORT_UNFORWARD: {

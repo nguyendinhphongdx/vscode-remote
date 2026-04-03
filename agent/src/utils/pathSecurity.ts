@@ -10,6 +10,10 @@ export class PathSecurityError extends Error {
 }
 
 export function resolveSafePath(userPath: string): string {
+  if (!config.workspaceRoot) {
+    throw new PathSecurityError('No workspace folder is open');
+  }
+
   // Reject null bytes
   if (userPath.includes('\0')) {
     throw new PathSecurityError('Path contains null bytes');
@@ -27,12 +31,16 @@ export function resolveSafePath(userPath: string): string {
 }
 
 export async function resolveSafePathWithSymlink(userPath: string): Promise<string> {
+  if (!config.workspaceRoot) {
+    throw new PathSecurityError('No workspace folder is open');
+  }
+
   const resolved = resolveSafePath(userPath);
 
   // Check symlink target
   try {
     const real = await fs.realpath(resolved);
-    if (!real.startsWith(config.workspaceRoot)) {
+    if (!real.startsWith(config.workspaceRoot!)) {
       throw new PathSecurityError('Symlink points outside workspace');
     }
     return real;
