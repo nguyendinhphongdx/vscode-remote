@@ -1,6 +1,15 @@
 {
   "name": "vscode-remote",
+  "version": "0.3.17",
   "private": true,
+  "description": "Access your dev environment from anywhere — full VS Code experience in the browser with terminal, file explorer, git, and port forwarding.",
+  "homepage": "https://vscode-remote-production.up.railway.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nguyendinhphongdx/vscode-remote"
+  },
+  "license": "MIT",
+  "author": "HanoiLab <opencode@hanoilab.vn>",
   "workspaces": ["shared", "agent", "relay"],
   "scripts": {
     "build:shared": "npm run build -w shared",
@@ -12,5 +21,17 @@
     "dev:relay": "npm run dev -w relay",
     "publish:agent": "npm run build:shared && npm run build:agent && npm publish -w agent",
     "start": "npm run start -w relay"
-  }
+  },
+  "keywords": [
+    "vscode",
+    "remote",
+    "ide",
+    "editor",
+    "terminal",
+    "code-server",
+    "web-ide",
+    "pwa",
+    "devtools",
+    "remote-development"
+  ]
 }

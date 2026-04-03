@@ -223,16 +223,80 @@
         <!-- Connect to Remote -->
         <div class="card">
           <h2>Connect to Remote</h2>
-          <div class="form-group">
-            <label>Remote Machine ID</label>
-            <input type="text" id="remoteId" placeholder="000-000-000" maxlength="11" />
+          <!-- Step 1: Machine ID + Password -->
+          <div id="connectStep1">
+            <div class="form-group">
+              <label>Remote Machine ID</label>
+              <input type="text" id="remoteId" placeholder="000-000-000" maxlength="11" />
+            </div>
+            <div class="form-group">
+              <label>Password</label>
+              <div style="position:relative">
+                <input type="password" id="remotePassword" placeholder="Enter password" style="padding-right:36px" />
+                <button type="button" onclick="togglePasswordVisibility()" id="togglePwBtn" class="btn-icon" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);border:none;background:transparent;font-size:14px" title="Show password">&#128065;</button>
+              </div>
+            </div>
+            <button class="btn" id="connectBtn" onclick="connectRemote()" disabled>Connect</button>
           </div>
-          <div class="form-group">
-            <label>Password</label>
-            <input type="password" id="remotePassword" placeholder="Enter password" />
+          <!-- Step 2: OTP (shown when 2FA required) -->
+          <div id="connectStep2" style="display:none">
+            <div style="font-size:13px;color:#a78bfa;margin-bottom:12px">&#128274; Two-Factor Authentication required</div>
+            <div class="form-group">
+              <label>Enter the 6-digit code from your authenticator app</label>
+              <input type="text" id="remoteOtpCode" placeholder="000000" maxlength="9" inputmode="numeric" style="text-align:center;font-size:18px;letter-spacing:4px" />
+            </div>
+            <button class="btn" id="otpVerifyBtn" onclick="verifyOtp()">Verify</button>
+            <button class="btn-secondary" onclick="cancelOtp()" style="margin-top:8px">Back</button>
           </div>
-          <button class="btn" id="connectBtn" onclick="connectRemote()" disabled>Connect</button>
           <div class="error" id="error"></div>
+        </div>
+
+        <!-- Two-Factor Authentication -->
+        <div class="card">
+          <h2>Two-Factor Authentication</h2>
+          <div id="totpStatus">
+            <div class="info-row">
+              <span class="info-label">Status</span>
+              <span id="totpStatusText" class="status"><span class="status-dot" id="totpDot"></span> Checking...</span>
+            </div>
+          </div>
+          <div id="totpActions" style="margin-top:12px"></div>
+          <!-- Setup flow (hidden by default) -->
+          <div id="totpSetup" style="display:none">
+            <div style="text-align:center;margin:16px 0">
+              <img id="totpQR" alt="QR Code" style="border-radius:8px;background:#fff;padding:8px" />
+            </div>
+            <div class="form-group">
+              <label>Or enter this secret manually</label>
+              <input type="text" id="totpSecret" readonly onclick="this.select()" style="font-size:12px;letter-spacing:2px" />
+            </div>
+            <div class="form-group">
+              <label>Enter the 6-digit code from your authenticator app to verify</label>
+              <input type="text" id="totpCode" placeholder="000000" maxlength="6" inputmode="numeric" pattern="[0-9]*" style="text-align:center;font-size:18px;letter-spacing:4px" />
+            </div>
+            <button class="btn" onclick="confirmEnableTotp()">Enable 2FA</button>
+            <button class="btn-secondary" onclick="cancelSetup()" style="margin-top:8px">Cancel</button>
+            <div class="error" id="totpError"></div>
+
+            <!-- Backup codes (shown after enable) -->
+            <div id="totpBackupCodes" style="display:none;margin-top:16px">
+              <div style="background:#2a1a00;border:1px solid #e2c08d;border-radius:6px;padding:12px">
+                <div style="color:#e2c08d;font-size:12px;font-weight:600;margin-bottom:8px">&#9888; Save these backup codes</div>
+                <div style="color:#ccc;font-size:11px;margin-bottom:8px">Each code can only be used once. Store them somewhere safe.</div>
+                <div id="backupCodesList" style="font-family:'Cascadia Code',monospace;font-size:14px;color:#fff;line-height:2;column-count:2"></div>
+              </div>
+            </div>
+          </div>
+          <!-- Disable flow -->
+          <div id="totpDisable" style="display:none">
+            <div class="form-group">
+              <label>Enter your password to disable 2FA</label>
+              <input type="password" id="totpDisablePassword" placeholder="Password" />
+            </div>
+            <button class="btn" style="background:#c74e39" onclick="confirmDisableTotp()">Disable 2FA</button>
+            <button class="btn-secondary" onclick="cancelDisable()" style="margin-top:8px">Cancel</button>
+            <div class="error" id="totpDisableError"></div>
+          </div>
         </div>
 
         <!-- Settings -->
@@ -503,6 +567,10 @@
       }
     }
 
+    let pendingRelayBase = '';
+    let pendingOtpSession = '';
+    let pendingConnectMachineId = '';
+
     async function connectRemote() {
       const machineId = document.getElementById('remoteId').value.replace(/-/g, '');
       const password = document.getElementById('remotePassword').value;
@@ -547,9 +615,22 @@
           return;
         }
 
-        const { token } = await loginRes.json();
+        const loginData = await loginRes.json();
+
+        // Check if 2FA required
+        if (loginData.requireOtp) {
+          pendingRelayBase = relayBase;
+          pendingOtpSession = loginData.otpSession;
+          pendingConnectMachineId = machineId;
+          document.getElementById('connectStep1').style.display = 'none';
+          document.getElementById('connectStep2').style.display = 'block';
+          document.getElementById('remoteOtpCode').value = '';
+          document.getElementById('remoteOtpCode').focus();
+          return;
+        }
+
         const url = new URL(connectData.editorUrl);
-        url.searchParams.set('token', token);
+        url.searchParams.set('token', loginData.token);
         window.open(url.toString(), '_blank');
       } catch (err) {
         errorEl.textContent = 'Connection failed';
@@ -559,8 +640,84 @@
       }
     }
 
+    async function verifyOtp() {
+      const code = document.getElementById('remoteOtpCode').value.trim();
+      const errorEl = document.getElementById('error');
+      errorEl.textContent = '';
+
+      if (!code) {
+        errorEl.textContent = 'Please enter the verification code';
+        return;
+      }
+
+      const btn = document.getElementById('otpVerifyBtn');
+      btn.disabled = true;
+      btn.textContent = 'Verifying...';
+
+      try {
+        const res = await fetch(`${pendingRelayBase}/api/auth/otp-verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            machineId: pendingConnectMachineId,
+            otpSession: pendingOtpSession,
+            code,
+          }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          errorEl.textContent = data.error || 'Verification failed';
+          return;
+        }
+
+        const data = await res.json();
+        const connectRes = await fetch('/api/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ machineId: pendingConnectMachineId }),
+        });
+        const connectData = await connectRes.json();
+        const url = new URL(connectData.editorUrl);
+        url.searchParams.set('token', data.token);
+        window.open(url.toString(), '_blank');
+        cancelOtp();
+      } catch {
+        errorEl.textContent = 'Verification failed';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Verify';
+      }
+    }
+
+    function cancelOtp() {
+      document.getElementById('connectStep1').style.display = 'block';
+      document.getElementById('connectStep2').style.display = 'none';
+      document.getElementById('error').textContent = '';
+      pendingOtpSession = '';
+      pendingRelayBase = '';
+      pendingConnectMachineId = '';
+    }
+
+    function togglePasswordVisibility() {
+      const input = document.getElementById('remotePassword');
+      const btn = document.getElementById('togglePwBtn');
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.title = 'Hide password';
+        btn.style.opacity = '1';
+      } else {
+        input.type = 'password';
+        btn.title = 'Show password';
+        btn.style.opacity = '0.5';
+      }
+    }
+
     document.getElementById('remotePassword').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') connectRemote();
+    });
+    document.getElementById('remoteOtpCode').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') verifyOtp();
     });
 
     // ===== Regenerate Password =====
@@ -630,9 +787,178 @@
       }
     }
 
+    // ===== TOTP / 2FA =====
+    let pendingTotpSecret = null;
+    let pendingBackupCodes = null;
+
+    async function fetchTotpStatus() {
+      try {
+        const res = await fetch('/api/totp/status');
+        const data = await res.json();
+        const dot = document.getElementById('totpDot');
+        const text = document.getElementById('totpStatusText');
+        const actions = document.getElementById('totpActions');
+
+        if (data.enabled) {
+          dot.className = 'status-dot online';
+          text.innerHTML = '<span class="status-dot online"></span> Enabled';
+          actions.innerHTML = `
+            <div style="font-size:12px;color:#999;margin-bottom:8px">Backup codes remaining: ${data.backupCodesRemaining}</div>
+            <button class="btn-secondary" onclick="startDisableTotp()">Disable 2FA</button>
+          `;
+        } else {
+          dot.className = 'status-dot offline';
+          text.innerHTML = '<span class="status-dot offline"></span> Disabled';
+          actions.innerHTML = '<button class="btn" onclick="startSetupTotp()">Set up 2FA</button>';
+        }
+      } catch {
+        document.getElementById('totpStatusText').textContent = 'Error';
+      }
+    }
+
+    async function startSetupTotp() {
+      const setup = document.getElementById('totpSetup');
+      const actions = document.getElementById('totpActions');
+      document.getElementById('totpError').textContent = '';
+      document.getElementById('totpCode').value = '';
+      document.getElementById('totpBackupCodes').style.display = 'none';
+
+      actions.style.display = 'none';
+      setup.style.display = 'block';
+
+      try {
+        const res = await fetch('/api/totp/setup', { method: 'POST' });
+        const data = await res.json();
+        pendingTotpSecret = data.secret;
+        pendingBackupCodes = data.backupCodes;
+        document.getElementById('totpQR').src = data.qrCode;
+        document.getElementById('totpSecret').value = data.secret;
+      } catch {
+        document.getElementById('totpError').textContent = 'Failed to generate setup';
+      }
+    }
+
+    function cancelSetup() {
+      document.getElementById('totpSetup').style.display = 'none';
+      document.getElementById('totpActions').style.display = 'block';
+      pendingTotpSecret = null;
+      pendingBackupCodes = null;
+    }
+
+    async function confirmEnableTotp() {
+      const code = document.getElementById('totpCode').value.trim();
+      const errorEl = document.getElementById('totpError');
+      errorEl.textContent = '';
+
+      if (!code || code.length !== 6) {
+        errorEl.textContent = 'Please enter a 6-digit code';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/totp/enable', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            secret: pendingTotpSecret,
+            code,
+            backupCodes: pendingBackupCodes,
+          }),
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          errorEl.textContent = data.error || 'Failed to enable 2FA';
+          return;
+        }
+
+        // Show backup codes and a Done button
+        const list = document.getElementById('backupCodesList');
+        list.innerHTML = pendingBackupCodes.map(c => `<div>${c}</div>`).join('');
+        document.getElementById('totpBackupCodes').style.display = 'block';
+
+        // Hide setup form inputs, show only backup codes + Done
+        document.getElementById('totpQR').parentElement.style.display = 'none';
+        document.getElementById('totpSecret').parentElement.style.display = 'none';
+        document.getElementById('totpCode').parentElement.style.display = 'none';
+        // Replace Enable button with Done
+        const enableBtn = document.querySelector('#totpSetup .btn');
+        enableBtn.textContent = 'I\'ve saved my backup codes';
+        enableBtn.onclick = finishTotpSetup;
+        // Hide cancel button
+        const cancelBtn = document.querySelector('#totpSetup .btn-secondary');
+        if (cancelBtn) cancelBtn.style.display = 'none';
+
+      } catch {
+        errorEl.textContent = 'Failed to enable 2FA';
+      }
+    }
+
+    function finishTotpSetup() {
+      document.getElementById('totpSetup').style.display = 'none';
+      document.getElementById('totpActions').style.display = 'block';
+      // Reset setup form for next time
+      document.getElementById('totpQR').parentElement.style.display = '';
+      document.getElementById('totpSecret').parentElement.style.display = '';
+      document.getElementById('totpCode').parentElement.style.display = '';
+      document.getElementById('totpBackupCodes').style.display = 'none';
+      const enableBtn = document.querySelector('#totpSetup .btn');
+      enableBtn.textContent = 'Enable 2FA';
+      enableBtn.onclick = confirmEnableTotp;
+      const cancelBtn = document.querySelector('#totpSetup .btn-secondary');
+      if (cancelBtn) cancelBtn.style.display = '';
+      fetchTotpStatus();
+      pendingTotpSecret = null;
+      pendingBackupCodes = null;
+    }
+
+    function startDisableTotp() {
+      document.getElementById('totpDisable').style.display = 'block';
+      document.getElementById('totpActions').style.display = 'none';
+      document.getElementById('totpDisableError').textContent = '';
+      document.getElementById('totpDisablePassword').value = '';
+    }
+
+    function cancelDisable() {
+      document.getElementById('totpDisable').style.display = 'none';
+      document.getElementById('totpActions').style.display = 'block';
+    }
+
+    async function confirmDisableTotp() {
+      const password = document.getElementById('totpDisablePassword').value;
+      const errorEl = document.getElementById('totpDisableError');
+      errorEl.textContent = '';
+
+      if (!password) {
+        errorEl.textContent = 'Please enter your password';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/totp/disable', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          errorEl.textContent = data.error || 'Failed to disable 2FA';
+          return;
+        }
+
+        document.getElementById('totpDisable').style.display = 'none';
+        document.getElementById('totpActions').style.display = 'block';
+        fetchTotpStatus();
+      } catch {
+        errorEl.textContent = 'Failed to disable 2FA';
+      }
+    }
+
     // ===== Init =====
     fetchStatus();
     setInterval(fetchStatus, 3000);
+    fetchTotpStatus();
     loadDocsNav();
   </script>
 </body>

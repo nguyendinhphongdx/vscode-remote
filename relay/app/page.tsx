@@ -582,6 +582,9 @@ export default function LandingPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [otpRequired, setOtpRequired] = useState(false);
+  const [otpSession, setOtpSession] = useState("");
+  const [otpCode, setOtpCode] = useState("");
   const [pkgTab, setPkgTab] = useState<keyof typeof PKG_CMDS>("npm");
   const [osTab, setOsTab] = useState("Linux");
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -631,13 +634,58 @@ export default function LandingPage() {
         throw new Error(data.error || "Connection failed");
       }
 
-      const { token } = await res.json();
-      setToken(token);
+      const data = await res.json();
+
+      // Check if 2FA is required
+      if (data.requireOtp) {
+        setOtpRequired(true);
+        setOtpSession(data.otpSession);
+        setOtpCode("");
+        return;
+      }
+
+      setToken(data.token);
       setMachineId(rawMid);
       addRecent(rawMid);
       router.push(`/editor/${rawMid}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connection failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOtpVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const rawMid = machineId.replace(/-/g, "");
+    setError("");
+
+    if (!otpCode.trim()) {
+      setError("Please enter the verification code");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/otp-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ machineId: rawMid, otpSession, code: otpCode.trim() }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Verification failed");
+      }
+
+      const data = await res.json();
+      setToken(data.token);
+      setMachineId(rawMid);
+      addRecent(rawMid);
+      setOtpRequired(false);
+      router.push(`/editor/${rawMid}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Verification failed");
     } finally {
       setLoading(false);
     }
@@ -747,61 +795,113 @@ export default function LandingPage() {
 
               {/* Connect Form */}
               <div id="connect">
-                <form onSubmit={handleConnect} className="space-y-3">
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <input
-                      type="text"
-                      value={machineId}
-                      onChange={(e) => setMid(formatMachineId(e.target.value))}
-                      placeholder="000-000-000"
-                      className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none font-mono tracking-widest text-center sm:text-left"
-                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fafafa" }}
-                      onFocus={(e) => (e.target.style.borderColor = "rgba(59,130,246,0.5)")}
-                      onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
-                    />
-                    <div className="relative flex-1">
+                {!otpRequired ? (
+                  <form onSubmit={handleConnect} className="space-y-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <input
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Password"
-                        className="w-full px-4 py-2.5 pr-11 rounded-xl text-sm outline-none"
+                        type="text"
+                        value={machineId}
+                        onChange={(e) => setMid(formatMachineId(e.target.value))}
+                        placeholder="000-000-000"
+                        className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none font-mono tracking-widest text-center sm:text-left"
                         style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fafafa" }}
                         onFocus={(e) => (e.target.style.borderColor = "rgba(59,130,246,0.5)")}
                         onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 transition-opacity"
-                        style={{ color: "#a1a1aa", opacity: 0.9 }}
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                      >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
+                      <div className="relative flex-1">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Password"
+                          className="w-full px-4 py-2.5 pr-11 rounded-xl text-sm outline-none"
+                          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fafafa" }}
+                          onFocus={(e) => (e.target.style.borderColor = "rgba(59,130,246,0.5)")}
+                          onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.1)")}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((v) => !v)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 transition-opacity"
+                          style={{ color: "#a1a1aa", opacity: 0.9 }}
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-2.5 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
-                    style={{ background: "linear-gradient(135deg, #3b82f6, #7c3aed)" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
-                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-                  >
-                    {loading ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Connecting...
-                      </>
-                    ) : (
-                      <>
-                        Connect
-                        <ArrowRight size={16} />
-                      </>
-                    )}
-                  </button>
-                </form>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full py-2.5 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                      style={{ background: "linear-gradient(135deg, #3b82f6, #7c3aed)" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                    >
+                      {loading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Connecting...
+                        </>
+                      ) : (
+                        <>
+                          Connect
+                          <ArrowRight size={16} />
+                        </>
+                      )}
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleOtpVerify} className="space-y-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Shield size={16} style={{ color: "#a78bfa" }} />
+                      <span className="text-sm font-medium" style={{ color: "#e4e4e7" }}>Two-Factor Authentication</span>
+                    </div>
+                    <p className="text-xs mb-2" style={{ color: "#a1a1aa" }}>
+                      Enter the 6-digit code from your authenticator app, or a backup code.
+                    </p>
+                    <input
+                      type="text"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9a-fA-F-]/g, "").slice(0, 9))}
+                      placeholder="000000"
+                      className="w-full px-4 py-3 rounded-xl text-lg outline-none font-mono tracking-[0.3em] text-center"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(167,139,250,0.3)", color: "#fafafa" }}
+                      onFocus={(e) => (e.target.style.borderColor = "rgba(167,139,250,0.6)")}
+                      onBlur={(e) => (e.target.style.borderColor = "rgba(167,139,250,0.3)")}
+                      autoFocus
+                      autoComplete="one-time-code"
+                      inputMode="numeric"
+                    />
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full py-2.5 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                      style={{ background: "linear-gradient(135deg, #7c3aed, #6d28d9)" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                    >
+                      {loading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Verifying...
+                        </>
+                      ) : (
+                        "Verify"
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setOtpRequired(false); setOtpCode(""); setError(""); }}
+                      className="w-full py-2 rounded-xl text-xs transition-colors"
+                      style={{ color: "#a1a1aa" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = "#e4e4e7")}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = "#a1a1aa")}
+                    >
+                      Back to login
+                    </button>
+                  </form>
+                )}
                 {error && (
                   <p className="text-xs mt-3" style={{ color: "#f87171" }}>{error}</p>
                 )}

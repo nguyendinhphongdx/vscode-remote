@@ -1,109 +1,125 @@
-# VS Code Remote — Vibecode Everywhere
+<p align="center">
+  <img src="https://img.shields.io/badge/Open-Code-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white" alt="OpenCode" />
+</p>
 
-**Full VS Code experience from any browser. On desktop, tablet, or mobile. Even as a native PWA app on your iPhone home screen.**
+<h1 align="center">OpenCode Remote</h1>
 
-Born from the need for true VS Code on mobile (where Claude Code dispatch was almost perfect, but lacked real terminal access and browser preview), this project brings the power of AnyDesk and TeamViewer to development.
+<p align="center">
+  <strong>Access your dev environment from anywhere.</strong><br/>
+  Full VS Code experience in the browser — terminal, file explorer, git, port forwarding & more.
+</p>
 
-Code anywhere. Use Claude CLI with voice from your device's terminal. Deploy with Cloudflare Tunnel in minutes.
+<p align="center">
+  <a href="https://vscode-remote-production.up.railway.app">Live Demo</a> &bull;
+  <a href="#quick-start">Quick Start</a> &bull;
+  <a href="#features">Features</a> &bull;
+  <a href="#architecture">Architecture</a> &bull;
+  <a href="#self-hosting">Self-Hosting</a>
+</p>
 
-![Landing](https://img.shields.io/badge/status-beta-blue) ![Node](https://img.shields.io/badge/node-%3E%3D20-green) ![License](https://img.shields.io/badge/license-MIT-blue)
+<p align="center">
+  <a href="https://www.npmjs.com/package/opencode-remote"><img src="https://img.shields.io/npm/v/opencode-remote?style=flat-square&color=cb3837&label=npm" alt="npm" /></a>
+  <img src="https://img.shields.io/badge/node-%3E%3D20.0.0-339933?style=flat-square&logo=node.js&logoColor=white" alt="node" />
+  <img src="https://img.shields.io/badge/next.js-16-000000?style=flat-square&logo=next.js" alt="Next.js" />
+  <img src="https://img.shields.io/badge/PWA-ready-5A0FC8?style=flat-square&logo=pwa&logoColor=white" alt="PWA" />
+  <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="license" />
+</p>
+
+---
+
+## What is this?
+
+OpenCode Remote lets you code on any machine from any device. Install the **agent** on your dev machine, connect through the **relay server** from a browser or PWA — even from your phone.
+
+No port forwarding. No VPN. Just a 9-digit Machine ID and a password.
 
 ```
-Browser (anywhere)             Relay Server (VPS)              Agent (your machine)
-┌──────────────┐    HTTPS     ┌──────────────────┐    WS      ┌──────────────┐
-│  React SPA   │ ◄──────────► │  Next.js + WS    │ ◄────────► │  Express     │
-│  Monaco      │              │  Hub (routing)    │            │  node-pty    │
-│  xterm.js    │              │  Admin dashboard  │            │  chokidar    │
-└──────────────┘              └──────────────────┘            └──────────────┘
-                                      ▲
-                              Agent connects outbound
+Phone / Tablet / Laptop            Relay Server (VPS)               Your Dev Machine
+┌──────────────────┐           ┌────────────────────┐           ┌──────────────────┐
+│  Browser / PWA   │ ◄─HTTPS─► │  Next.js UI        │ ◄──WSS──► │  Agent           │
+│  Monaco + xterm  │           │  WebSocket Hub     │           │  node-pty + fs   │
+└──────────────────┘           └────────────────────┘           └──────────────────┘
+                                        ▲
+                               Agent connects outbound
                               (no port opening needed)
 ```
+
+## Quick Start
+
+### 1. Install the agent
+
+```bash
+npm i -g opencode-remote
+```
+
+### 2. Run it
+
+```bash
+opencode
+```
+
+```
+========================================
+  Machine ID : 321-529-789
+  Password   : kJPD5NSQ
+  Relay      : wss://vscode-remote-production.up.railway.app/api/agent-ws
+========================================
+Agent UI available at http://localhost:9000
+```
+
+### 3. Connect from anywhere
+
+Open **[vscode-remote-production.up.railway.app](https://vscode-remote-production.up.railway.app)**, enter the Machine ID and password, and start coding.
 
 ## Features
 
 ### Code Editor
 - Monaco Editor with syntax highlighting for 40+ languages
-- Multi-tab editing with preview/pinned tabs and unsaved indicators
+- Multi-tab editing with unsaved indicators
 - Ctrl+Click on import paths to navigate between files
-- Minimap, word wrap, bracket matching
+- Minimap, bracket matching, word wrap
+
+### Integrated Terminal
+- Full PTY via xterm.js + node-pty — run anything
+- Multiple sessions with tab management
+- Bottom or right panel position, maximize, resize
+- Mobile toolbar with D-pad arrows, Ctrl shortcuts, text input
+- Voice input — dictate commands using speech recognition
 
 ### File Explorer
 - Tree view with lazy-loaded directories
 - Context menu: New File, New Folder, Rename, Delete
-- Git status indicators on files (M/A/D/U badges, colored filenames)
-- Material Icon Theme file icons
-- Real-time sync via file watcher (lazy -- only watches when browser is connected)
-
-### Integrated Terminal
-- Full PTY emulation via xterm.js + node-pty
-- Multiple sessions with tab management
-- Split terminal (bottom or right position)
-- Resize, maximize, and keyboard toggle (Ctrl+`)
+- Git status indicators (M/A/D/U badges)
+- Real-time sync via chokidar file watcher
 
 ### Source Control
-- Branch display with changed file count badge
 - Stage / Unstage / Discard per file or all at once
 - Inline diff viewer (staged vs unstaged)
-- Commit with Ctrl+Enter
+- Commit, push, pull from the sidebar
 
 ### Port Forwarding
 - Auto-detect listening ports on the remote machine
-- One-click Cloudflare Tunnel for public HTTPS URLs
+- HTTP-over-WebSocket tunneling for remote service access
 - In-editor preview via split iframe panel
-- Copy URL, open in browser, or stop forwarding
 
 ### Workspace Management
-- Start with empty window (no folder opened), just like VS Code
-- Open Folder picker: browse remote directories, type-ahead filter
-- Works on Linux, macOS, and Windows paths
+- Open Folder picker — browse remote directories
+- Start with empty window, just like VS Code
 
 ### Security
-- JWT authentication (24h session expiry, auto-logout)
-- bcrypt password hashing
-- Path traversal protection (all paths resolved against workspace root)
-- Token verification on WebSocket connections (relay verifies via agent)
-- Admin dashboard protected with separate HMAC-signed auth
+- JWT authentication with 24h session expiry
+- Bcrypt password hashing (random + fixed passwords)
+- **TOTP 2FA** — optional two-factor auth with QR code + backup codes
+- Path traversal prevention (sandboxed to workspace root)
+- Rate limiting on login attempts
+- Relay secret for agent registration
 
 ### Mobile & PWA
-- Responsive layout (StatusBar, TitleBar, menus adapt to screen size)
-- Installable as PWA on Chrome, Edge, mobile
+- Installable as PWA on Chrome, Edge, Safari, mobile
 - Standalone display with dark theme
-
-## Quick Start
-
-### 1. Start the Agent
-
-```bash
-cd agent
-npm install
-npm run dev
-```
-
-On first run, the agent generates credentials:
-
-```
-╔═══════════════════════════════════════╗
-║  Machine ID:  940-195-819            ║
-║  Password:    aB3xK9mQ              ║
-╚═══════════════════════════════════════╝
-```
-
-### 2. Start the Relay
-
-```bash
-cd relay
-npm install
-npm run dev
-```
-
-### 3. Connect
-
-Open `http://localhost:9001`, enter the Machine ID and password, and start coding.
+- Responsive layout optimized for tablets and phones
 
 ## CLI
-
-The agent ships as a CLI tool (`opencode`):
 
 ```bash
 opencode start       # Start agent in background
@@ -114,32 +130,57 @@ opencode logs        # Tail logs
 opencode run         # Run in foreground (dev)
 ```
 
-## Deployment
+## Architecture
 
-### Development (same machine)
+Monorepo with 3 packages:
 
-```bash
-# Terminal 1
-cd agent && npm run dev
-
-# Terminal 2
-cd relay && npm run dev
-
-# Open http://localhost:9001
+```
+vscode-remote/
+├── shared/          # TypeScript types & WebSocket protocol
+├── agent/           # Node.js agent (runs on your dev machine)
+│   ├── handlers/        # Message handlers (fs, terminal, git, port, auth)
+│   ├── services/        # Core services (pty, file system, TOTP, watcher)
+│   ├── relay/           # Outbound WebSocket client to relay
+│   └── ui/              # Agent dashboard (static HTML)
+└── relay/           # Next.js relay server (deployed on VPS)
+    ├── app/             # Pages (landing, editor, dashboard)
+    ├── components/      # Monaco, xterm, file explorer, git UI
+    └── server/          # WebSocket hub, agent routing, port proxy
 ```
 
-### Production (relay on VPS)
+### WebSocket Protocol
+
+Typed JSON messages with request/response correlation:
+
+```typescript
+// Request
+{ id: "uuid", type: "fs:read", payload: { path: "src/index.ts" } }
+
+// Response
+{ id: "uuid", type: "fs:read", success: true, payload: { content: "..." } }
+```
+
+Message types: `auth:*`, `fs:*`, `terminal:*`, `git:*`, `port:*`, `workspace:*`
+
+## Self-Hosting
 
 ```bash
-# On VPS
-cd relay
-RELAY_SECRET=your-secret ADMIN_PASSWORD=your-admin-pw npm run build
-NODE_ENV=production npm start
+git clone https://github.com/nguyendinhphongdx/vscode-remote.git
+cd vscode-remote
+pnpm install
 
-# On remote machine
-cd agent
-# Agent connects outbound to relay -- no port opening needed
-npm start
+# Set environment
+echo "RELAY_SECRET=your-secret-here" > .env
+
+# Build & run relay
+pnpm build
+pnpm start
+```
+
+Point agents to your relay:
+
+```bash
+RELAY_URL=wss://your-server.com/api/agent-ws opencode
 ```
 
 ### Environment Variables
@@ -148,44 +189,39 @@ npm start
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `9000` | Local HTTP/WS port |
-| `WORKSPACE_ROOT` | _none_ | Default workspace (empty = no folder opened) |
-| `VSR_DATA_DIR` | `~/.opencode` | Config directory |
+| `PORT` | `9000` | Local dashboard port |
+| `WORKSPACE_ROOT` | _(none)_ | Default workspace folder |
+| `VSR_DATA_DIR` | `~/.opencode` | Config & data directory |
 
 **Relay**
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `9001` | Server port |
-| `RELAY_SECRET` | `dev-secret` | Shared secret for agent registration |
-| `ADMIN_PASSWORD` | _empty_ | Admin dashboard password (empty = no auth) |
+| `RELAY_SECRET` | `dev-secret` | Shared secret for agent auth |
 
 ## Keyboard Shortcuts
 
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+S` | Save current file |
-| `Ctrl+`` ` | Toggle terminal |
+| `` Ctrl+` `` | Toggle terminal |
 | `Ctrl+B` | Toggle sidebar |
 | `Ctrl+Shift+G` | Toggle Source Control |
-| `Ctrl+Click` | Navigate to import path |
 | `Ctrl+Enter` | Commit (in Source Control) |
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Next.js 16, React 19, Tailwind CSS 4 |
-| Editor | Monaco Editor |
-| Terminal | xterm.js + WebGL renderer |
-| State | Zustand |
-| Icons | Lucide React, Material Icon Theme |
-| Agent | Node.js 20+, Express, ws, node-pty |
-| File Watch | chokidar (lazy subscriber model) |
-| Auth | jsonwebtoken, bcryptjs |
-| Tunneling | Cloudflare Tunnel (cloudflared) |
-| Build | TypeScript, tsx (dev), tsc (build) |
+| Editor | [Monaco Editor](https://microsoft.github.io/monaco-editor/) |
+| Terminal | [xterm.js](https://xtermjs.org/) + [node-pty](https://github.com/microsoft/node-pty) |
+| Frontend | [Next.js 16](https://nextjs.org/) + [Tailwind CSS](https://tailwindcss.com/) + [Zustand](https://zustand.docs.pmnd.rs/) |
+| Agent | [Express](https://expressjs.com/) + [ws](https://github.com/websockets/ws) |
+| Auth | [jsonwebtoken](https://github.com/auth0/node-jsonwebtoken) + [bcryptjs](https://github.com/dcodeIO/bcrypt.js) + [otpauth](https://github.com/nicolo-ribaudo/otpauth) |
+| File Watch | [chokidar](https://github.com/paulmillr/chokidar) |
+| Build | [tsup](https://tsup.egoist.dev/) + [Turbopack](https://turbo.build/pack) |
 
 ## License
 
-MIT
+MIT &copy; [HanoiLab](mailto:opencode@hanoilab.vn)
