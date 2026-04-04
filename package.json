@@ -22,6 +22,9 @@
     "publish:agent": "npm run build:shared && npm run build:agent && npm publish -w agent",
     "start": "npm run start -w relay"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "node-pty", "sharp", "unrs-resolver"]
+  },
   "keywords": [
     "vscode",
     "remote",
