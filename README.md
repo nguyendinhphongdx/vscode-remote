@@ -10,6 +10,7 @@
 </p>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/@hanoilab/opencode">npm</a> &bull;
   <a href="https://vscode-remote-production.up.railway.app">Live Demo</a> &bull;
   <a href="#quick-start">Quick Start</a> &bull;
   <a href="#features">Features</a> &bull;
@@ -55,16 +56,15 @@ npm i -g @hanoilab/opencode
 ### 2. Run it
 
 ```bash
-opencode
+opencode start
 ```
 
 ```
-========================================
+Starting agent...
+Agent started (PID: 12345)
   Machine ID : 321-529-789
-  Password   : kJPD5NSQ
-  Relay      : wss://vscode-remote-production.up.railway.app/api/agent-ws
-========================================
-Agent UI available at http://localhost:9000
+  Password   : *** (saved at first run)
+  Admin UI   : http://localhost:9000
 ```
 
 ### 3. Connect from anywhere
@@ -122,12 +122,22 @@ Open **[vscode-remote-production.up.railway.app](https://vscode-remote-productio
 ## CLI
 
 ```bash
-opencode start       # Start agent in background
-opencode stop        # Stop agent
-opencode status      # Show status + credentials
-opencode password    # Show or reset password
-opencode logs        # Tail logs
-opencode run         # Run in foreground (dev)
+opencode start             # Start agent in background
+opencode stop              # Stop agent
+opencode restart           # Restart the agent
+opencode status            # Show agent status
+opencode id                # Show Machine ID
+opencode password          # Show or reset password
+opencode config            # Open Admin UI in browser
+opencode logs              # Show last 50 log lines
+opencode logs -f           # Follow log output
+opencode run               # Run in foreground (debug)
+opencode install           # Register as system service (auto-start)
+opencode uninstall         # Remove system service
+opencode upgrade           # Upgrade to latest version
+opencode upgrade 0.4.0     # Upgrade to specific version
+opencode purge --yes       # Completely remove agent from machine
+opencode help              # Show help
 ```
 
 ## Architecture
@@ -180,7 +190,7 @@ pnpm start
 Point agents to your relay:
 
 ```bash
-RELAY_URL=wss://your-server.com/api/agent-ws opencode
+RELAY_URL=wss://your-server.com/api/agent-ws opencode start
 ```
 
 ### Environment Variables
