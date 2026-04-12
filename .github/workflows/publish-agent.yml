@@ -42,7 +42,7 @@ jobs:
       - name: Build agent (bake env vars)
         run: pnpm --filter @hanoilab/opencode build
         env:
-          RELAY_URL: ${{ vars.RELAY_URL }}
+          RELAY_URL: ${{ secrets.RELAY_URL }}
           RELAY_SECRET: ${{ secrets.RELAY_SECRET }}
 
       - name: Publish to npm
