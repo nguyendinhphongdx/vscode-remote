@@ -37,6 +37,7 @@ const commands: Record<string, CommandInfo> = {
   logs:      { description: 'Show agent logs',                    handler: cmdLogs },
   install:   { description: 'Register as system service (auto-start)', handler: cmdInstall },
   uninstall: { description: 'Remove system service',              handler: cmdUninstall },
+  setup:     { description: 'Set relay URL and secret',           handler: cmdSetup },
   run:       { description: 'Run agent in foreground',            handler: cmdRun },
   upgrade:   { description: 'Upgrade to latest (or specified) version', handler: cmdUpgrade },
   purge:     { description: 'Completely remove agent from this machine', handler: cmdPurge },
@@ -446,6 +447,78 @@ function cmdPurge() {
   console.log('OpenCode Agent has been completely removed from this machine.');
 }
 
+function cmdSetup() {
+  const url = args[0];
+  const secret = args[1];
+
+  if (!url && !secret) {
+    // Show current values
+    const config = readConfig();
+    const currentUrl = config?.settings?.relayUrl || '(not set)';
+    console.log('');
+    console.log('  Current relay config:');
+    console.log(`    URL    : ${currentUrl}`);
+    // Check .env file for secret
+    const envPath = path.join(DATA_DIR, '.env');
+    let currentSecret = '(not set)';
+    if (fs.existsSync(envPath)) {
+      const env = fs.readFileSync(envPath, 'utf-8');
+      const match = env.match(/^RELAY_SECRET=(.+)$/m);
+      if (match?.[1]) currentSecret = match[1].slice(0, 4) + '****';
+    }
+    console.log(`    Secret : ${currentSecret}`);
+    console.log('');
+    console.log('  Usage: opencode setup <relay-url> <relay-secret>');
+    console.log('');
+    console.log('  Example:');
+    console.log('    opencode setup wss://my-relay.example.com/api/agent-ws my-secret-key');
+    console.log('');
+    return;
+  }
+
+  if (!url || !secret) {
+    console.error('Both <relay-url> and <relay-secret> are required.');
+    console.error('Usage: opencode setup <relay-url> <relay-secret>');
+    process.exit(1);
+  }
+
+  // Update relayUrl in config.json
+  const config = readConfig();
+  if (config) {
+    config.settings = config.settings || {};
+    config.settings.relayUrl = url;
+    config.settings.updatedAt = new Date().toISOString();
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
+  } else {
+    // No config yet — will be created on first start, but save URL for it
+    console.log('No config found. Run "opencode start" first, then re-run setup.');
+    process.exit(1);
+  }
+
+  // Save secret to ~/.opencode/.env
+  const envPath = path.join(DATA_DIR, '.env');
+  let envContent = '';
+  if (fs.existsSync(envPath)) {
+    envContent = fs.readFileSync(envPath, 'utf-8');
+    // Replace existing RELAY_SECRET line
+    if (envContent.match(/^RELAY_SECRET=.*$/m)) {
+      envContent = envContent.replace(/^RELAY_SECRET=.*$/m, `RELAY_SECRET=${secret}`);
+    } else {
+      envContent = envContent.trimEnd() + `\nRELAY_SECRET=${secret}\n`;
+    }
+  } else {
+    envContent = `RELAY_SECRET=${secret}\n`;
+  }
+  fs.writeFileSync(envPath, envContent, 'utf-8');
+
+  console.log('');
+  console.log('  Relay configured:');
+  console.log(`    URL    : ${url}`);
+  console.log(`    Secret : ${secret.slice(0, 4)}****`);
+  console.log('');
+  console.log('  Restart agent to apply: opencode restart');
+}
+
 function cmdHelp() {
   console.log('');
   console.log('  OpenCode Agent');
@@ -466,6 +539,7 @@ function cmdHelp() {
   console.log('    opencode run            Run in foreground (debug)');
   console.log('    opencode upgrade         Upgrade to latest version');
   console.log('    opencode upgrade 0.4.0   Upgrade to specific version');
+  console.log('    opencode setup wss://relay.example.com/api/agent-ws my-secret');
   console.log('    opencode purge --yes    Remove agent completely');
   console.log('');
 }
