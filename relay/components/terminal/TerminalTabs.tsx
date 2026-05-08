@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useTerminalStore } from "@/store/terminalStore";
 import { useTerminal } from "@/lib/hooks/useTerminal";
 import { Plus, X, Trash2, ChevronDown, Maximize2, Minimize2, TerminalSquare, PanelRight, PanelBottom, Ellipsis } from "lucide-react";
-import { VoiceMicButton } from "./VoiceMicButton";
+import { VoiceMicButton, VoiceMode } from "./VoiceMicButton";
 import type { ShellInfo } from "@vscode-remote/shared";
 
 export type TerminalPosition = "bottom" | "right";
@@ -20,10 +20,11 @@ interface TerminalTabsProps {
 
 export function TerminalTabs({ onCreateTerminal, onToggle, isMaximized, onToggleMaximize, position = "bottom", onTogglePosition }: TerminalTabsProps) {
   const { sessions, activeSessionId } = useTerminalStore();
-  const { closeTerminal, setActiveSession, fetchShells } = useTerminal();
+  const { closeTerminal, setActiveSession, fetchShells, sendInput } = useTerminal();
   const [shells, setShells] = useState<ShellInfo[]>([]);
   const [showShellMenu, setShowShellMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [voiceActive, setVoiceActive] = useState(false);
   const shellMenuRef = useRef<HTMLDivElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
 
@@ -55,6 +56,17 @@ export function TerminalTabs({ onCreateTerminal, onToggle, isMaximized, onToggle
   }, [onCreateTerminal]);
 
   return (
+    <>
+      {voiceActive && (
+        <div className="px-2 py-1.5 bg-bg-secondary border-b border-border shrink-0">
+          <VoiceMode
+            onSubmit={(text) => {
+              if (activeSessionId) sendInput(activeSessionId, text + "\r");
+            }}
+            onClose={() => setVoiceActive(false)}
+          />
+        </div>
+      )}
     <div className="flex items-center h-[35px] bg-bg-secondary border-b border-border shrink-0 select-none">
       {/* Left: Panel label + primary actions */}
       <div className="flex items-center h-full shrink-0">
@@ -119,7 +131,10 @@ export function TerminalTabs({ onCreateTerminal, onToggle, isMaximized, onToggle
             </button>
             {showMoreMenu && (
               <div className="absolute top-full left-0 mt-1 bg-bg-secondary border border-border rounded shadow-lg z-50 min-w-44 py-1">
-                <VoiceMicButton asMenuItem />
+                <VoiceMicButton
+                  asMenuItem
+                  onActivate={() => { setVoiceActive(true); setShowMoreMenu(false); }}
+                />
                 {onTogglePosition && (
                   <button
                     onClick={() => { onTogglePosition(); setShowMoreMenu(false); }}
@@ -190,5 +205,6 @@ export function TerminalTabs({ onCreateTerminal, onToggle, isMaximized, onToggle
         })}
       </div>
     </div>
+    </>
   );
 }
