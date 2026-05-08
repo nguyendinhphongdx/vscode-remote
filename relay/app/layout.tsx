@@ -32,18 +32,18 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "VS Code Remote" }],
   alternates: {
-    canonical: "https://vscode-remote-production.up.railway.app",
+    canonical: "https://vscode-remote.onrender.com",
   },
   openGraph: {
     type: "website",
-    url: "https://vscode-remote-production.up.railway.app",
+    url: "https://vscode-remote.onrender.com",
     title: "VS Code Remote — Vibecode everywhere",
     description:
       "Connect to your remote machine with a 9-digit code. Full VS Code experience with terminal, file explorer, git, and port forwarding — all in your browser.",
     siteName: "VS Code Remote",
     images: [
       {
-        url: "https://vscode-remote-production.up.railway.app/og-image.png",
+        url: "https://vscode-remote.onrender.com/og-image.png",
         width: 1200,
         height: 630,
         alt: "VS Code Remote - Remote development from anywhere",
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     title: "VS Code Remote — Vibecode everywhere",
     description:
       "Secure remote development from anywhere. Terminal, file explorer, git, port forwarding — all in your browser.",
-    images: ["https://vscode-remote-production.up.railway.app/og-image.png"],
+    images: ["https://vscode-remote.onrender.com/og-image.png"],
   },
   robots: {
     index: true,
@@ -99,7 +99,7 @@ export default function RootLayout({
               "@type": "WebApplication",
               "name": "VS Code Remote",
               "description": "Access your remote development environment from any browser. Full VS Code experience with terminal, file explorer, git integration, and port forwarding — secured with JWT authentication.",
-              "url": "https://vscode-remote-production.up.railway.app",
+              "url": "https://vscode-remote.onrender.com",
               "applicationCategory": "DeveloperApplication",
               "offers": {
                 "@type": "Offer",

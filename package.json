@@ -3,7 +3,7 @@
   "version": "0.3.17",
   "private": true,
   "description": "Access your dev environment from anywhere — full VS Code experience in the browser with terminal, file explorer, git, and port forwarding.",
-  "homepage": "https://vscode-remote-production.up.railway.app",
+  "homepage": "https://vscode-remote.onrender.com",
   "repository": {
     "type": "git",
     "url": "https://github.com/nguyendinhphongdx/vscode-remote"

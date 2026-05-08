@@ -462,16 +462,18 @@ npm run lint                    # ESLint
 
 ## Deployment
 
-### Railway (Relay Server)
+### Render (Relay Server)
+
+Use the [`render.yaml`](./render.yaml) blueprint at the repo root. Render picks it up automatically when you create a Blueprint service.
 
 1. **Root directory**: `/` (monorepo root)
-2. **Build command**: `npm install && npm run build:relay:full`
-3. **Start command**: `npm run start -w relay`
+2. **Build command**: `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @vscode-remote/shared build && pnpm --filter client build`
+3. **Start command**: `pnpm --filter client start`
 4. **Environment variables**:
    - `RELAY_SECRET` — must match agent's RELAY_SECRET
    - `ADMIN_PASSWORD` — admin dashboard password
    - `NODE_ENV=production`
-   - `PORT` — Railway sets this automatically
+   - `PORT` — Render sets this automatically
 
 ### Agent (npm publish)
 

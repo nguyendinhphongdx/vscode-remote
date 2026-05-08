@@ -32,7 +32,7 @@
     "editor",
     "terminal"
   ],
-  "homepage": "https://vscode-remote-production.up.railway.app",
+  "homepage": "https://vscode-remote.onrender.com",
   "repository": {
     "type": "git",
     "url": "https://github.com/nguyendinhphongdx/vscode-remote"

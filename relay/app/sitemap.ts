@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://vscode-remote-production.up.railway.app';
+  const baseUrl = 'https://vscode-remote.onrender.com';
   
   return [
     {

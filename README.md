@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@hanoilab/opencode">npm</a> &bull;
-  <a href="https://vscode-remote-production.up.railway.app">Live Demo</a> &bull;
+  <a href="https://vscode-remote.onrender.com">Live Demo</a> &bull;
   <a href="#quick-start">Quick Start</a> &bull;
   <a href="#features">Features</a> &bull;
   <a href="#architecture">Architecture</a> &bull;
@@ -69,7 +69,7 @@ Agent started (PID: 12345)
 
 ### 3. Connect from anywhere
 
-Open **[vscode-remote-production.up.railway.app](https://vscode-remote-production.up.railway.app)**, enter the Machine ID and password, and start coding.
+Open **[vscode-remote.onrender.com](https://vscode-remote.onrender.com)**, enter the Machine ID and password, and start coding.
 
 ## Features
 
