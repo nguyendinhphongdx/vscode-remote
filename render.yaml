@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: vscode-remote-relay
+    runtime: node
+    plan: starter           # free tier sleeps after 15 min idle; starter = $7/mo always-on
+    region: singapore
+    rootDir: .
+    buildCommand: |
+      corepack enable && \
+      pnpm install --frozen-lockfile && \
+      pnpm --filter @vscode-remote/shared build && \
+      pnpm --filter client build
+    startCommand: pnpm --filter client start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: RELAY_SECRET
+        sync: false           # set thủ công trên dashboard
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false           # optional, comma-separated
