@@ -19,10 +19,18 @@ async function main() {
   logger.info(`  Machine ID : ${formattedId}`);
   const pw = configStore.getRandomPassword();
   logger.info(`  Password   : ${pw || '(none — use fixed password)'}`)
-  logger.info(`  Relay      : ${config.relayUrl}`);
+  logger.info(`  Relay      : ${config.relayUrl || '(not set)'}`);
   const secret = process.env.RELAY_SECRET || __BUILD_RELAY_SECRET__;
   logger.info(`  Secret     : ${secret ? '***configured***' : '⚠ NOT SET'}`);
   logger.info('='.repeat(40));
+
+  if (!config.relayUrl || !secret) {
+    logger.error('Relay is not configured. Run:');
+    logger.error('  opencode setup <relay-url> <relay-secret>');
+    logger.error('Example:');
+    logger.error('  opencode setup wss://relay.example.com/api/agent-ws my-secret');
+    process.exit(1);
+  }
 
   // Create relay client (outbound WS to relay server)
   const relayClient = new RelayClient(config.relayUrl, store.machineId);

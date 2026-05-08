@@ -13,7 +13,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: brilliant-laughter
+    environment: production
     permissions:
       contents: read
     steps:
@@ -39,6 +39,16 @@ jobs:
         if: inputs.version
         working-directory: agent
         run: npm version ${{ inputs.version }} --no-git-tag-version
+
+      - name: Debug — verify secrets are accessible
+        run: |
+          echo "RELAY_URL set:    $([ -n "$RELAY_URL" ] && echo yes || echo no)"
+          echo "RELAY_URL length: ${#RELAY_URL}"
+          echo "RELAY_SECRET set:    $([ -n "$RELAY_SECRET" ] && echo yes || echo no)"
+          echo "RELAY_SECRET length: ${#RELAY_SECRET}"
+        env:
+          RELAY_URL: ${{ secrets.RELAY_URL }}
+          RELAY_SECRET: ${{ secrets.RELAY_SECRET }}
 
       - name: Build agent (bake env vars)
         run: pnpm --filter @hanoilab/opencode build
