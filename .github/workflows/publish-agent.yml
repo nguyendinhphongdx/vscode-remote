@@ -51,7 +51,12 @@ jobs:
           RELAY_SECRET: ${{ secrets.RELAY_SECRET }}
 
       - name: Build agent (bake env vars)
-        run: pnpm --filter @hanoilab/opencode build
+        working-directory: agent
+        run: |
+          echo "Pre-build env:"
+          echo "  RELAY_URL length: ${#RELAY_URL}"
+          echo "  RELAY_SECRET length: ${#RELAY_SECRET}"
+          pnpm build
         env:
           RELAY_URL: ${{ secrets.RELAY_URL }}
           RELAY_SECRET: ${{ secrets.RELAY_SECRET }}

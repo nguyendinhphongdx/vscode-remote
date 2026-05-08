@@ -1,6 +1,6 @@
 {
   "name": "@hanoilab/opencode",
-  "version": "0.3.28",
+  "version": "0.3.29",
   "type": "module",
   "description": "OpenCode — access your dev environment from anywhere",
   "publishConfig": {
