@@ -50,16 +50,17 @@ jobs:
           RELAY_URL: ${{ secrets.RELAY_URL }}
           RELAY_SECRET: ${{ secrets.RELAY_SECRET }}
 
-      - name: Build agent (bake env vars)
+      - name: Generate build constants from secrets
         working-directory: agent
         run: |
-          echo "Pre-build env:"
-          echo "  RELAY_URL length: ${#RELAY_URL}"
-          echo "  RELAY_SECRET length: ${#RELAY_SECRET}"
-          pnpm build
+          node -e "const fs=require('fs');const url=process.env.RELAY_URL||'';const secret=process.env.RELAY_SECRET||'';fs.writeFileSync('src/buildConstants.generated.ts',\`// AUTO-GENERATED — do not edit.\nexport const BUILD_RELAY_URL = \${JSON.stringify(url)};\nexport const BUILD_RELAY_SECRET = \${JSON.stringify(secret)};\n\`);console.log('Generated buildConstants.generated.ts (URL='+url.length+' chars, SECRET='+secret.length+' chars)');"
         env:
           RELAY_URL: ${{ secrets.RELAY_URL }}
           RELAY_SECRET: ${{ secrets.RELAY_SECRET }}
+
+      - name: Build agent
+        working-directory: agent
+        run: pnpm build
 
       - name: Publish to npm
         working-directory: agent
