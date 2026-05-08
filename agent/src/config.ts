@@ -20,8 +20,10 @@ declare const __BUILD_RELAY_URL__: string;
 declare const __BUILD_RELAY_SECRET__: string;
 
 // Runtime env > build-time bake > persisted config
+const DEFAULT_RELAY_URL = 'wss://vscode-remote.onrender.com/api/agent-ws';
+
 const ENV_OVERRIDES: Record<string, () => string | undefined> = {
-  relayUrl: () => process.env.RELAY_URL || (typeof __BUILD_RELAY_URL__ !== 'undefined' ? __BUILD_RELAY_URL__ : undefined),
+  relayUrl: () => process.env.RELAY_URL || (typeof __BUILD_RELAY_URL__ !== 'undefined' && __BUILD_RELAY_URL__ ? __BUILD_RELAY_URL__ : DEFAULT_RELAY_URL),
   relaySecret: () => process.env.RELAY_SECRET || (typeof __BUILD_RELAY_SECRET__ !== 'undefined' ? __BUILD_RELAY_SECRET__ : undefined),
 };
 

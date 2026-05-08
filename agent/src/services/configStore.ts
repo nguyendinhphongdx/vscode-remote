@@ -38,7 +38,7 @@ async function createDefaultConfig(): Promise<PersistedConfig> {
     },
     totp: null,
     settings: {
-      relayUrl: process.env.RELAY_URL || __BUILD_RELAY_URL__ || '',
+      relayUrl: process.env.RELAY_URL || __BUILD_RELAY_URL__ || 'wss://vscode-remote.onrender.com/api/agent-ws',
       localPort: parseInt(process.env.LOCAL_PORT || '9000', 10),
       workspaceRoot: process.env.WORKSPACE_ROOT ? path.resolve(process.env.WORKSPACE_ROOT) : null,
       maxTerminals: 5,
