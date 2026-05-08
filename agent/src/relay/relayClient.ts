@@ -1,5 +1,3 @@
-declare const __BUILD_RELAY_SECRET__: string;
-
 import WebSocket from 'ws';
 import { v4 as uuid } from 'uuid';
 import { MSG, type WSMessage, type WSResponse } from '@vscode-remote/shared';
@@ -7,6 +5,7 @@ import { routeMessage, sendEvent } from '../handlers/router.js';
 import { addSubscriber, removeSubscriber } from '../services/watcherService.js';
 import { closeAllTerminals } from '../services/ptyService.js';
 import { logger } from '../utils/logger.js';
+import { config } from '../config.js';
 
 export class RelayClient {
   private ws: WebSocket | null = null;
@@ -38,7 +37,7 @@ export class RelayClient {
       const registerMsg: WSMessage = {
         id: uuid(),
         type: MSG.AGENT_REGISTER,
-        payload: { machineId: this.machineId, secret: process.env.RELAY_SECRET || __BUILD_RELAY_SECRET__ || '' },
+        payload: { machineId: this.machineId, secret: config.relaySecret },
       };
       this.ws!.send(JSON.stringify(registerMsg));
     });

@@ -18,6 +18,7 @@ import {
   EyeOff,
   Download,
   X,
+  Clock,
 } from "lucide-react";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -37,16 +38,58 @@ function formatMachineId(value: string): string {
 const RECENT_KEY = "vsremote_recent";
 const MAX_RECENT = 20;
 
+interface RecentSession {
+  machineId: string;
+  lastConnected: string;
+}
+
+function getRecents(): RecentSession[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]");
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(
+      (r): r is RecentSession =>
+        r && typeof r.machineId === "string" && typeof r.lastConnected === "string"
+    );
+  } catch {
+    return [];
+  }
+}
+
 function addRecent(machineId: string): void {
   try {
-    const recent = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]").filter(
-      (r: { machineId: string }) => r.machineId !== machineId
-    );
+    const recent = getRecents().filter((r) => r.machineId !== machineId);
     recent.unshift({ machineId, lastConnected: new Date().toISOString() });
     localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
   } catch {
     // ignore
   }
+}
+
+function removeRecent(machineId: string): RecentSession[] {
+  try {
+    const recent = getRecents().filter((r) => r.machineId !== machineId);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+    return recent;
+  } catch {
+    return [];
+  }
+}
+
+function formatRelativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const diff = Date.now() - then;
+  if (diff < 60_000) return "just now";
+  const m = Math.floor(diff / 60_000);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}d ago`;
+  const mo = Math.floor(d / 30);
+  if (mo < 12) return `${mo}mo ago`;
+  return `${Math.floor(mo / 12)}y ago`;
 }
 
 const features = [
@@ -590,7 +633,28 @@ export default function LandingPage() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallBtn, setShowInstallBtn] = useState(false);
   const [installDismissed, setInstallDismissed] = useState(false);
+  const [recents, setRecents] = useState<RecentSession[]>([]);
   const router = useRouter();
+
+  useEffect(() => {
+    setRecents(getRecents());
+  }, []);
+
+  const handlePickRecent = (mid: string) => {
+    setMid(formatMachineId(mid));
+    setError("");
+    setOtpRequired(false);
+    setOtpCode("");
+    requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLInputElement>('#connect input[type="password"]');
+      el?.focus();
+    });
+  };
+
+  const handleRemoveRecent = (mid: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRecents(removeRecent(mid));
+  };
 
   // Capture PWA install prompt
   useEffect(() => {
@@ -647,6 +711,7 @@ export default function LandingPage() {
       setToken(data.token);
       setMachineId(rawMid);
       addRecent(rawMid);
+      setRecents(getRecents());
       router.push(`/editor/${rawMid}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connection failed");
@@ -682,6 +747,7 @@ export default function LandingPage() {
       setToken(data.token);
       setMachineId(rawMid);
       addRecent(rawMid);
+      setRecents(getRecents());
       setOtpRequired(false);
       router.push(`/editor/${rawMid}`);
     } catch (err) {
@@ -792,6 +858,59 @@ export default function LandingPage() {
               <p className="text-sm sm:text-base mb-8" style={{ color: "#a1a1aa", lineHeight: 1.7 }}>
                 Connect to your remote machine with a 9-digit code. Full VS Code experience with terminal, file explorer, git, and port forwarding.
               </p>
+
+              {/* Recent Sessions */}
+              {!otpRequired && recents.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock size={12} style={{ color: "#71717a" }} />
+                    <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: "#71717a" }}>
+                      Recent
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {recents.slice(0, 6).map((r) => (
+                      <div
+                        key={r.machineId}
+                        className="inline-flex items-center rounded-lg text-xs transition-all"
+                        style={{
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "rgba(59,130,246,0.08)";
+                          e.currentTarget.style.borderColor = "rgba(59,130,246,0.3)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                          e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handlePickRecent(r.machineId)}
+                          className="inline-flex items-center gap-2 pl-3 pr-2 py-1.5"
+                          style={{ color: "#e4e4e7" }}
+                          title={`Last connected ${formatRelativeTime(r.lastConnected)}`}
+                        >
+                          <span className="font-mono tracking-wider">{formatMachineId(r.machineId)}</span>
+                          <span style={{ color: "#52525b" }}>·</span>
+                          <span style={{ color: "#71717a" }}>{formatRelativeTime(r.lastConnected)}</span>
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Remove ${formatMachineId(r.machineId)}`}
+                          onClick={(e) => handleRemoveRecent(r.machineId, e)}
+                          className="p-1 mr-1 rounded opacity-40 hover:opacity-100 transition-opacity"
+                          style={{ color: "#a1a1aa" }}
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Connect Form */}
               <div id="connect">

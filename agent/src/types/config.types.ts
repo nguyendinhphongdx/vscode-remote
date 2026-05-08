@@ -23,6 +23,7 @@ export interface PersistedConfig {
 
 export interface AgentSettings {
   relayUrl: string;
+  relaySecret: string;
   localPort: number;
   workspaceRoot: string | null;
   maxTerminals: number;

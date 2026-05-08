@@ -1,5 +1,3 @@
-declare const __BUILD_RELAY_URL__: string;
-
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
@@ -38,7 +36,10 @@ async function createDefaultConfig(): Promise<PersistedConfig> {
     },
     totp: null,
     settings: {
-      relayUrl: process.env.RELAY_URL || __BUILD_RELAY_URL__ || 'wss://vscode-remote.onrender.com/api/agent-ws',
+      // Empty by default — resolved at runtime via buildEnv (env > persisted > build-time > hardcoded fallback).
+      // User overrides (via `opencode setup` or admin UI) populate these fields.
+      relayUrl: '',
+      relaySecret: '',
       localPort: parseInt(process.env.LOCAL_PORT || '9000', 10),
       workspaceRoot: process.env.WORKSPACE_ROOT ? path.resolve(process.env.WORKSPACE_ROOT) : null,
       maxTerminals: 5,
@@ -58,11 +59,18 @@ export async function initialize(): Promise<void> {
   try {
     const data = await fs.readFile(CONFIG_PATH, 'utf-8');
     currentConfig = JSON.parse(data) as PersistedConfig;
+    let needsWrite = false;
     // Migrate: add totp field if missing (existing configs before 2FA feature)
     if (currentConfig.totp === undefined) {
       currentConfig.totp = null;
-      await writeConfig(currentConfig);
+      needsWrite = true;
     }
+    // Migrate: add relaySecret if missing (existing configs before secret was persisted)
+    if (currentConfig.settings.relaySecret === undefined) {
+      currentConfig.settings.relaySecret = '';
+      needsWrite = true;
+    }
+    if (needsWrite) await writeConfig(currentConfig);
   } catch {
     currentConfig = await createDefaultConfig();
     await writeConfig(currentConfig);

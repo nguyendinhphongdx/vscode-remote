@@ -1,5 +1,3 @@
-declare const __BUILD_RELAY_SECRET__: string;
-
 import { config, configStore } from './config.js';
 import { RelayClient } from './relay/relayClient.js';
 import { createLocalServer } from './server/local.js';
@@ -13,18 +11,19 @@ async function main() {
 
   const store = configStore.get();
   const mid = store.machineId;
+  const relayUrl = config.relayUrl;
+  const relaySecret = config.relaySecret;
 
   const formattedId = `${mid.slice(0,3)}-${mid.slice(3,6)}-${mid.slice(6)}`;
   logger.info('='.repeat(40));
   logger.info(`  Machine ID : ${formattedId}`);
   const pw = configStore.getRandomPassword();
-  logger.info(`  Password   : ${pw || '(none — use fixed password)'}`)
-  logger.info(`  Relay      : ${config.relayUrl || '(not set)'}`);
-  const secret = process.env.RELAY_SECRET || __BUILD_RELAY_SECRET__;
-  logger.info(`  Secret     : ${secret ? '***configured***' : '⚠ NOT SET'}`);
+  logger.info(`  Password   : ${pw || '(none — use fixed password)'}`);
+  logger.info(`  Relay      : ${relayUrl || '(not set)'}`);
+  logger.info(`  Secret     : ${relaySecret ? '***configured***' : '⚠ NOT SET'}`);
   logger.info('='.repeat(40));
 
-  if (!config.relayUrl || !secret) {
+  if (!relayUrl || !relaySecret) {
     logger.error('Relay is not configured. Run:');
     logger.error('  opencode setup <relay-url> <relay-secret>');
     logger.error('Example:');
@@ -32,16 +31,9 @@ async function main() {
     process.exit(1);
   }
 
-  // Create relay client (outbound WS to relay server)
-  const relayClient = new RelayClient(config.relayUrl, store.machineId);
-
-  // Forward file watch events to relay
+  const relayClient = new RelayClient(relayUrl, store.machineId);
   onFileChange((event) => relayClient.sendEvent(MSG.FS_WATCH_EVENT, event));
-
-  // Connect to relay
   relayClient.connect();
-
-  // Start local HTTP server (agent UI at localhost)
   createLocalServer(relayClient);
 
   if (config.workspaceRoot) {
@@ -50,7 +42,6 @@ async function main() {
     logger.info('No workspace folder set (will be selected from browser)');
   }
 
-  // Graceful shutdown
   const shutdown = () => {
     logger.info('Shutting down...');
     closeAllTerminals();

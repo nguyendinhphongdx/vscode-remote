@@ -452,20 +452,13 @@ function cmdSetup() {
   const secret = args[1];
 
   if (!url && !secret) {
-    // Show current values
     const config = readConfig();
-    const currentUrl = config?.settings?.relayUrl || '(not set)';
+    const currentUrl = config?.settings?.relayUrl || '(not set — using built-in default)';
+    const persistedSecret = config?.settings?.relaySecret as string | undefined;
+    const currentSecret = persistedSecret ? persistedSecret.slice(0, 4) + '****' : '(not set — using built-in default)';
     console.log('');
     console.log('  Current relay config:');
     console.log(`    URL    : ${currentUrl}`);
-    // Check .env file for secret
-    const envPath = path.join(DATA_DIR, '.env');
-    let currentSecret = '(not set)';
-    if (fs.existsSync(envPath)) {
-      const env = fs.readFileSync(envPath, 'utf-8');
-      const match = env.match(/^RELAY_SECRET=(.+)$/m);
-      if (match?.[1]) currentSecret = match[1].slice(0, 4) + '****';
-    }
     console.log(`    Secret : ${currentSecret}`);
     console.log('');
     console.log('  Usage: opencode setup <relay-url> <relay-secret>');
@@ -482,41 +475,25 @@ function cmdSetup() {
     process.exit(1);
   }
 
-  // Update relayUrl in config.json
-  const config = readConfig();
-  if (config) {
-    config.settings = config.settings || {};
-    config.settings.relayUrl = url;
-    config.settings.updatedAt = new Date().toISOString();
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
-  } else {
-    // No config yet — will be created on first start, but save URL for it
-    console.log('No config found. Run "opencode start" first, then re-run setup.');
-    process.exit(1);
+  // Persist both URL and secret in config.json. Agent will load on next start
+  // (creates a default config first if none exists).
+  let config = readConfig();
+  if (!config) {
+    config = { settings: {} };
   }
-
-  // Save secret to ~/.opencode/.env
-  const envPath = path.join(DATA_DIR, '.env');
-  let envContent = '';
-  if (fs.existsSync(envPath)) {
-    envContent = fs.readFileSync(envPath, 'utf-8');
-    // Replace existing RELAY_SECRET line
-    if (envContent.match(/^RELAY_SECRET=.*$/m)) {
-      envContent = envContent.replace(/^RELAY_SECRET=.*$/m, `RELAY_SECRET=${secret}`);
-    } else {
-      envContent = envContent.trimEnd() + `\nRELAY_SECRET=${secret}\n`;
-    }
-  } else {
-    envContent = `RELAY_SECRET=${secret}\n`;
-  }
-  fs.writeFileSync(envPath, envContent, 'utf-8');
+  config.settings = config.settings || {};
+  config.settings.relayUrl = url;
+  config.settings.relaySecret = secret;
+  config.updatedAt = new Date().toISOString();
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
+  try { fs.chmodSync(CONFIG_FILE, 0o600); } catch { /* Windows ignores */ }
 
   console.log('');
   console.log('  Relay configured:');
   console.log(`    URL    : ${url}`);
   console.log(`    Secret : ${secret.slice(0, 4)}****`);
   console.log('');
-  console.log('  Restart agent to apply: opencode restart');
+  console.log(isRunning() ? '  Restart agent to apply: opencode restart' : '  Now run: opencode start');
 }
 
 function cmdHelp() {
