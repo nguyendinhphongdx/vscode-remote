@@ -63,6 +63,37 @@ export function createLocalServer(relayClient: RelayClient): void {
     res.json({ password: newPassword });
   });
 
+  // API: set a custom (fixed) password — coexists with random until cleared
+  app.post('/api/password/fixed', async (req, res) => {
+    const { password } = req.body ?? {};
+    if (typeof password !== 'string' || password.length < 4) {
+      res.status(400).json({ error: 'Password must be at least 4 characters' });
+      return;
+    }
+    if (password.length > 128) {
+      res.status(400).json({ error: 'Password too long (max 128 characters)' });
+      return;
+    }
+    try {
+      await configStore.setFixedPassword(password);
+      logger.info('Custom password set');
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
+  // API: remove the custom password (random remains active)
+  app.delete('/api/password/fixed', async (_req, res) => {
+    try {
+      await configStore.clearFixedPassword();
+      logger.info('Custom password removed');
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
   // API: get settings
   app.get('/api/settings', (_req, res) => {
     const store = configStore.get();

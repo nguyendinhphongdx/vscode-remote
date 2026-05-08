@@ -212,6 +212,23 @@
             </span>
           </div>
           <div class="info-row">
+            <span class="info-label">Custom password</span>
+            <span style="display:flex;align-items:center;gap:8px">
+              <span id="customPwLabel" style="font-size:12px;color:#888">Not set</span>
+              <button id="customPwToggleBtn" onclick="toggleCustomPwForm()" class="btn-icon" title="Set custom password">&#x270E;</button>
+              <button id="customPwRemoveBtn" onclick="removeCustomPw()" class="btn-icon" title="Remove custom password" style="display:none">&#x2715;</button>
+            </span>
+          </div>
+          <div id="customPwForm" style="display:none;margin:0 0 8px 0;padding:10px;background:#252526;border-radius:4px">
+            <input type="password" id="customPwInput" placeholder="New password (4+ chars)" maxlength="128" style="margin-bottom:8px" />
+            <div style="display:flex;gap:8px">
+              <button class="btn" id="customPwSaveBtn" onclick="saveCustomPw()" style="flex:1">Save</button>
+              <button class="btn-secondary" onclick="hideCustomPwForm()" style="flex:1">Cancel</button>
+            </div>
+            <div class="error" id="customPwError"></div>
+            <div class="success" id="customPwSuccess" style="display:none"></div>
+          </div>
+          <div class="info-row">
             <span class="info-label">Relay</span>
             <span class="status">
               <span class="status-dot" id="statusDot"></span>
@@ -548,6 +565,7 @@
         document.getElementById('machineId').textContent =
           mid.slice(0,3) + '-' + mid.slice(3,6) + '-' + mid.slice(6);
         document.getElementById('password').textContent = data.password || '(fixed password set)';
+        updateCustomPwUI(!!data.hasFixedPassword);
         const dot = document.getElementById('statusDot');
         const text = document.getElementById('statusText');
         const connectBtn = document.getElementById('connectBtn');
@@ -737,6 +755,98 @@
         btn.disabled = false;
       }
     }
+
+    // ===== Custom (fixed) Password =====
+    function updateCustomPwUI(hasFixed) {
+      const label = document.getElementById('customPwLabel');
+      const toggleBtn = document.getElementById('customPwToggleBtn');
+      const removeBtn = document.getElementById('customPwRemoveBtn');
+      if (hasFixed) {
+        label.textContent = 'Active';
+        label.style.color = '#4ec9b0';
+        toggleBtn.title = 'Change custom password';
+        removeBtn.style.display = '';
+      } else {
+        label.textContent = 'Not set';
+        label.style.color = '#888';
+        toggleBtn.title = 'Set custom password';
+        removeBtn.style.display = 'none';
+      }
+    }
+
+    function toggleCustomPwForm() {
+      const form = document.getElementById('customPwForm');
+      const willOpen = form.style.display === 'none';
+      form.style.display = willOpen ? 'block' : 'none';
+      if (willOpen) {
+        document.getElementById('customPwInput').value = '';
+        document.getElementById('customPwError').textContent = '';
+        document.getElementById('customPwSuccess').style.display = 'none';
+        document.getElementById('customPwInput').focus();
+      }
+    }
+
+    function hideCustomPwForm() {
+      document.getElementById('customPwForm').style.display = 'none';
+    }
+
+    async function saveCustomPw() {
+      const input = document.getElementById('customPwInput');
+      const errorEl = document.getElementById('customPwError');
+      const successEl = document.getElementById('customPwSuccess');
+      const btn = document.getElementById('customPwSaveBtn');
+      errorEl.textContent = '';
+      successEl.style.display = 'none';
+
+      const password = input.value;
+      if (password.length < 4) {
+        errorEl.textContent = 'Password must be at least 4 characters';
+        return;
+      }
+
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/password/fixed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to set password');
+
+        input.value = '';
+        successEl.textContent = 'Custom password saved.';
+        successEl.style.display = 'block';
+        updateCustomPwUI(true);
+        setTimeout(hideCustomPwForm, 1200);
+      } catch (err) {
+        errorEl.textContent = err.message || 'Failed to set password';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function removeCustomPw() {
+      if (!confirm('Remove custom password? The random password will still work.')) return;
+      const removeBtn = document.getElementById('customPwRemoveBtn');
+      removeBtn.disabled = true;
+      try {
+        const res = await fetch('/api/password/fixed', { method: 'DELETE' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Failed to remove');
+        updateCustomPwUI(false);
+        hideCustomPwForm();
+      } catch (err) {
+        alert('Failed: ' + (err.message || 'Unknown error'));
+      } finally {
+        removeBtn.disabled = false;
+      }
+    }
+
+    document.getElementById('customPwInput').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') saveCustomPw();
+      if (e.key === 'Escape') hideCustomPwForm();
+    });
 
     // ===== Settings =====
     function toggleSettings() {
