@@ -64,6 +64,16 @@ html, body {
 
 .xterm .xterm-viewport {
   background-color: unset !important;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Let vertical swipes over the terminal content area pass through to the
+   viewport scroll instead of being captured by xterm's pointer handling. */
+.xterm .xterm-screen,
+.xterm .xterm-helper-textarea {
+  touch-action: pan-y;
 }
 
 .xterm-viewport::-webkit-scrollbar {
@@ -72,6 +82,18 @@ html, body {
 
 .xterm-viewport::-webkit-scrollbar-thumb {
   background: var(--color-scrollbar);
+}
+
+/* On touch devices the hover-based scrollbar reveal never fires; make the
+   scrollbar thicker and always-visible so users can also drag it. */
+@media (pointer: coarse) {
+  .xterm-viewport::-webkit-scrollbar {
+    width: 10px;
+  }
+  .xterm-viewport::-webkit-scrollbar-thumb {
+    background: var(--color-scrollbar-hover);
+    border-radius: 5px;
+  }
 }
 
 /* Selection */
