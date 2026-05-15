@@ -17,8 +17,10 @@ interface Props {
 
 export function WorkspacePicker({ open, onClose }: Props) {
   const { ws } = useWebSocket();
-  const { setWorkspace } = useWorkspaceStore();
-  const [inputValue, setInputValue] = useState("~/");
+  const { setWorkspace, platform } = useWorkspaceStore();
+  const isWindows = platform === "win32";
+  const defaultInput = isWindows ? "" : "~/";
+  const [inputValue, setInputValue] = useState(defaultInput);
   const [currentPath, setCurrentPath] = useState("");
   const [entries, setEntries] = useState<{ name: string; path: string }[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -29,11 +31,11 @@ export function WorkspacePicker({ open, onClose }: Props) {
   // Focus input when opened
   useEffect(() => {
     if (open) {
-      setInputValue("~/");
+      setInputValue(defaultInput);
       setSelectedIndex(0);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [open]);
+  }, [open, defaultInput]);
 
   // Browse directory when input changes
   const browse = useCallback(
@@ -141,6 +143,9 @@ export function WorkspacePicker({ open, onClose }: Props) {
           const parentSlash = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
           if (parentSlash >= 0) {
             setInputValue(trimmed.slice(0, parentSlash + 1));
+          } else if (isWindows && /^[A-Za-z]:$/.test(trimmed)) {
+            // From a Windows drive root like "C:\" → up to the drive list
+            setInputValue("");
           }
         }
         break;
@@ -165,7 +170,11 @@ export function WorkspacePicker({ open, onClose }: Props) {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a path to open as workspace (from ~/)"
+            placeholder={
+              isWindows
+                ? "Type a path (e.g. D:\\, C:\\Users\\me) — leave empty for drives"
+                : "Type a path to open as workspace (from ~/)"
+            }
             className="flex-1 bg-transparent border-none outline-none text-[13px] text-[#cccccc] placeholder-[#666]"
             spellCheck={false}
           />
@@ -183,7 +192,9 @@ export function WorkspacePicker({ open, onClose }: Props) {
 
         {/* Current path display */}
         <div className="px-3 py-1 text-[11px] text-[#666] border-b border-[#333]">
-          {loading ? "Loading..." : currentPath || "~"}
+          {loading
+            ? "Loading..."
+            : currentPath || (isWindows ? "Drives" : "~")}
         </div>
 
         {/* Directory list */}

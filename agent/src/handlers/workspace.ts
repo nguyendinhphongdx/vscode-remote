@@ -19,12 +19,41 @@ export async function handleWorkspaceMessage(
       sendResponse(ws, id, type, true, {
         workspaceRoot: root,
         folderName: root ? path.basename(root) : null,
+        platform: process.platform,
       });
       break;
     }
 
     case MSG.WORKSPACE_BROWSE: {
       const { path: browsePath } = (payload || {}) as { path?: string };
+      const isWindows = process.platform === 'win32';
+
+      // On Windows, an empty / root path returns the list of available drives
+      // as virtual "directories" so users can navigate to D:\, E:\, etc.
+      if (isWindows && (!browsePath || browsePath === '/' || browsePath === '\\')) {
+        const candidates = Array.from({ length: 26 }, (_, i) =>
+          String.fromCharCode(65 + i) + ':\\');
+        const drives = await Promise.all(
+          candidates.map(async (drive) => {
+            try {
+              await fs.access(drive);
+              return drive;
+            } catch {
+              return null;
+            }
+          })
+        );
+        const entries = drives
+          .filter((d): d is string => d !== null)
+          .map((drive) => ({
+            name: drive.slice(0, 2), // "C:"
+            path: drive,             // "C:\"
+            type: 'directory' as const,
+          }));
+        sendResponse(ws, id, type, true, { path: '', entries });
+        break;
+      }
+
       // Resolve ~ to home dir
       let absPath = browsePath || os.homedir();
       if (absPath.startsWith('~/') || absPath === '~') {

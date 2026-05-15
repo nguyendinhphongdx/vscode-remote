@@ -212,9 +212,14 @@ export interface WorkspaceBrowseResponse {
   entries: WorkspaceBrowseEntry[];
 }
 
+export type Platform =
+  | 'aix' | 'android' | 'darwin' | 'freebsd' | 'haiku'
+  | 'linux' | 'openbsd' | 'sunos' | 'win32' | 'cygwin' | 'netbsd';
+
 export interface WorkspaceInfoResponse {
   workspaceRoot: string | null;
   folderName: string | null;
+  platform: Platform;
 }
 
 export interface WorkspaceChangePayload {

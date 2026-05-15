@@ -150,7 +150,7 @@ export function TitleBar({ onOpenFolder, onNewTerminal }: TitleBarProps) {
     if (!ws) return;
     try {
       const result = await ws.send<WorkspaceInfoResponse>(MSG.WORKSPACE_INFO, {});
-      setWorkspace(result.workspaceRoot, result.folderName);
+      setWorkspace(result.workspaceRoot, result.folderName, result.platform);
     } catch {
       // ignore
     }
