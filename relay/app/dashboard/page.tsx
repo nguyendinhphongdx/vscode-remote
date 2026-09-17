@@ -12,6 +12,11 @@ import {
   Lock,
   LogOut,
   ArrowLeft,
+  Copy,
+  Check,
+  Eye,
+  EyeOff,
+  KeyRound,
 } from "lucide-react";
 
 interface AgentInfo {
@@ -126,6 +131,103 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
               {loading ? "Logging in..." : "Login"}
             </button>
           </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============ Agent Setup ============
+
+interface AgentSetupInfo {
+  relayUrl: string;
+  relaySecret: string;
+  setupCommand: string;
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          // Clipboard API unavailable (e.g. non-HTTPS context) — nothing sensible to fall back to.
+        }
+      }}
+      className="shrink-0 p-1.5 rounded-lg transition-colors"
+      style={{ color: copied ? "#4ade80" : "#71717a", border: "1px solid rgba(255,255,255,0.08)" }}
+      title="Copy"
+    >
+      {copied ? <Check size={13} /> : <Copy size={13} />}
+    </button>
+  );
+}
+
+function AgentSetupCard({ adminAuthed, adminRequired }: { adminAuthed: boolean; adminRequired: boolean }) {
+  const [setup, setSetup] = useState<AgentSetupInfo | null>(null);
+  const [revealed, setRevealed] = useState(false);
+
+  useEffect(() => {
+    if (!adminAuthed && adminRequired) return;
+    fetch("/api/admin/agent-setup")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setSetup(data))
+      .catch(() => setSetup(null));
+  }, [adminAuthed, adminRequired]);
+
+  if (!setup) return null;
+
+  const maskedSecret = setup.relaySecret.slice(0, 4) + "•".repeat(Math.max(setup.relaySecret.length - 4, 0));
+
+  return (
+    <div className="rounded-2xl mb-6" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="flex items-center gap-2.5 px-6 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        <KeyRound size={14} style={{ color: "#a855f7" }} />
+        <h2 className="text-sm font-semibold">Agent Setup</h2>
+        <span className="text-xs" style={{ color: "#52525b" }}>— dán vào máy chạy agent mới</span>
+      </div>
+      <div className="p-6 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <div className="text-[11px] font-medium uppercase tracking-wider mb-1.5" style={{ color: "#52525b" }}>Relay URL</div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-sm font-mono px-3 py-2 rounded-lg truncate" style={{ background: "rgba(255,255,255,0.03)" }}>{setup.relayUrl}</code>
+              <CopyButton text={setup.relayUrl} />
+            </div>
+          </div>
+          <div>
+            <div className="text-[11px] font-medium uppercase tracking-wider mb-1.5" style={{ color: "#52525b" }}>Relay Secret</div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-sm font-mono px-3 py-2 rounded-lg truncate" style={{ background: "rgba(255,255,255,0.03)" }}>
+                {revealed ? setup.relaySecret : maskedSecret}
+              </code>
+              <button
+                onClick={() => setRevealed((v) => !v)}
+                className="shrink-0 p-1.5 rounded-lg transition-colors"
+                style={{ color: "#71717a", border: "1px solid rgba(255,255,255,0.08)" }}
+                title={revealed ? "Hide" : "Show"}
+              >
+                {revealed ? <EyeOff size={13} /> : <Eye size={13} />}
+              </button>
+              <CopyButton text={setup.relaySecret} />
+            </div>
+          </div>
+        </div>
+        <div>
+          <div className="text-[11px] font-medium uppercase tracking-wider mb-1.5" style={{ color: "#52525b" }}>Setup command</div>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 text-sm font-mono px-3 py-2 rounded-lg overflow-x-auto whitespace-nowrap" style={{ background: "rgba(255,255,255,0.03)" }}>
+              {revealed ? setup.setupCommand : setup.setupCommand.replace(setup.relaySecret, maskedSecret)}
+            </code>
+            <CopyButton text={setup.setupCommand} />
+          </div>
+          <p className="text-xs mt-2" style={{ color: "#3f3f46" }}>
+            Chạy trên máy đích, rồi <code>opencode start</code>.
+          </p>
         </div>
       </div>
     </div>
@@ -252,6 +354,8 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
+
+          <AgentSetupCard adminAuthed={adminAuthed} adminRequired={adminRequired} />
 
           {/* Panels */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">

@@ -74,7 +74,7 @@ app.prepare().then(() => {
   expressApp.use("/api", express.json());
 
   // Routes
-  expressApp.use("/api/admin", createAdminRouter(adminAuth, adminPassword, dev));
+  expressApp.use("/api/admin", createAdminRouter(adminAuth, adminPassword, dev, relaySecret));
   expressApp.use("/api/auth", createAuthRouter());
   expressApp.use("/api/agents", createAgentsRouter(adminAuth));
 
