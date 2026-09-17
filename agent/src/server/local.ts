@@ -97,8 +97,13 @@ export function createLocalServer(relayClient: RelayClient): void {
   // API: get settings
   app.get('/api/settings', (_req, res) => {
     const store = configStore.get();
+    const relaySecret = config.relaySecret;
     res.json({
       relayUrl: store.settings.relayUrl,
+      // Masked, same convention as `opencode setup`'s CLI output — the full
+      // value was already typed once to save it, no need to redisplay it in
+      // a plain <input> every time this panel opens.
+      relaySecretPreview: relaySecret ? relaySecret.slice(0, 4) + '****' : null,
       workspaceRoot: store.settings.workspaceRoot,
       localPort: store.settings.localPort,
     });
@@ -106,10 +111,11 @@ export function createLocalServer(relayClient: RelayClient): void {
 
   // API: update settings (requires restart for some changes)
   app.put('/api/settings', async (req, res) => {
-    const { relayUrl, workspaceRoot } = req.body;
+    const { relayUrl, relaySecret, workspaceRoot } = req.body;
     const updates: Record<string, unknown> = {};
 
     if (relayUrl !== undefined) updates.relayUrl = relayUrl;
+    if (relaySecret !== undefined) updates.relaySecret = relaySecret;
     if (workspaceRoot !== undefined) updates.workspaceRoot = workspaceRoot;
 
     if (Object.keys(updates).length === 0) {
@@ -119,10 +125,12 @@ export function createLocalServer(relayClient: RelayClient): void {
 
     try {
       await configStore.updateSettings(updates as Parameters<typeof configStore.updateSettings>[0]);
-      logger.info('Settings updated', updates);
+      logger.info('Settings updated', { ...updates, relaySecret: relaySecret !== undefined ? '***' : undefined });
 
-      // Auto-reconnect relay if URL changed
-      if (relayUrl !== undefined) {
+      // Auto-reconnect relay if URL or secret changed (secret is read fresh
+      // from configStore on every register attempt — see config.ts's Proxy —
+      // so reconnecting with the current URL is enough to pick it up too).
+      if (relayUrl !== undefined || relaySecret !== undefined) {
         relayClient.reconnect(relayUrl);
       }
 

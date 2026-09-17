@@ -327,6 +327,11 @@
               <label>Relay URL</label>
               <input type="text" id="settingRelayUrl" class="setting-input" placeholder="ws://..." />
             </div>
+            <div class="form-group">
+              <label>Relay Secret</label>
+              <input type="password" id="settingRelaySecret" class="setting-input" placeholder="" />
+              <div id="settingRelaySecretHint" style="font-size:12px;color:#888;margin-top:4px"></div>
+            </div>
             <button class="btn-secondary" id="saveSettingsBtn" onclick="saveSettings()">Save Settings</button>
             <div class="success" id="settingsSaved" style="display:none">Settings saved.</div>
             <div class="error" id="settingsError"></div>
@@ -862,6 +867,14 @@
         const res = await fetch('/api/settings');
         const data = await res.json();
         document.getElementById('settingRelayUrl').value = data.relayUrl || '';
+        // Secret field is always left blank — we only ever get a masked
+        // preview back (never the plaintext), and typing over a placeholder
+        // that looked like a real value risks saving the mask itself as the
+        // new secret. Leaving it empty on save keeps the current secret.
+        document.getElementById('settingRelaySecret').value = '';
+        document.getElementById('settingRelaySecretHint').textContent = data.relaySecretPreview
+          ? `Hiện tại: ${data.relaySecretPreview} — để trống nếu không đổi`
+          : 'Chưa cấu hình';
       } catch {
         // ignore
       }
@@ -869,6 +882,7 @@
 
     async function saveSettings() {
       const relayUrl = document.getElementById('settingRelayUrl').value.trim();
+      const relaySecret = document.getElementById('settingRelaySecret').value.trim();
       const errorEl = document.getElementById('settingsError');
       const savedEl = document.getElementById('settingsSaved');
       errorEl.textContent = '';
@@ -878,15 +892,18 @@
       btn.disabled = true;
 
       try {
+        const body = { relayUrl };
+        if (relaySecret) body.relaySecret = relaySecret; // blank = keep current secret unchanged
         const res = await fetch('/api/settings', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ relayUrl }),
+          body: JSON.stringify(body),
         });
         const data = await res.json();
         if (data.success) {
           savedEl.style.display = 'block';
           setTimeout(() => { savedEl.style.display = 'none'; }, 3000);
+          fetchSettings(); // refresh the masked preview to reflect what was just saved
         } else {
           errorEl.textContent = data.error || 'Failed to save';
         }
