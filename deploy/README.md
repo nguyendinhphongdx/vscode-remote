@@ -32,8 +32,9 @@ gcloud compute instances add-tags <instance-name> --zone <zone> \
 
 | Secret | Giá trị |
 |---|---|
-| `RELAY_DEPLOY_SSH_KEY` | Nội dung PRIVATE key `gha_deploy_key` (toàn bộ, kể cả dòng BEGIN/END) |
-| `RELAY_VM_HOST` | IP tĩnh (hoặc domain) của VM |
+| `VM_SSH_KEY` | Nội dung PRIVATE key `gha_deploy_key` (toàn bộ, kể cả dòng BEGIN/END) |
+| `VM_HOST` | IP tĩnh (hoặc domain) của VM |
+| `VM_USER` | `deploy` |
 
 Workflow [`deploy-relay.yml`](../.github/workflows/deploy-relay.yml) chạy mỗi khi push lên `main`
 đụng tới `relay/`, `shared/`, hoặc `deploy/` — SSH vào VM bằng user `deploy`, `git reset --hard
