@@ -1,0 +1,17 @@
+[Unit]
+Description=vscode-remote relay server
+After=network.target
+
+[Service]
+Type=simple
+User=deploy
+WorkingDirectory=/opt/vscode-remote-relay
+EnvironmentFile=/opt/vscode-remote-relay/.env
+ExecStart=/usr/bin/pnpm --filter client start
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

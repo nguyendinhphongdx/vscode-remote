@@ -1,0 +1,10 @@
+# Caddy tự xin + gia hạn chứng chỉ Let's Encrypt cho domain bên dưới — chỉ cần domain đã trỏ A
+# record về đúng IP tĩnh của VM này (Caddy tự lo cả HTTP->HTTPS redirect và forward WebSocket
+# upgrade cho /api/ws, /api/agent-ws — không cần cấu hình gì thêm).
+#
+# SỬA domain bên dưới thành domain thật của bạn trước khi copy vào /etc/caddy/Caddyfile.
+# Gợi ý subdomain: vscode-relay.tutorial-aws.com
+
+vscode-relay.tutorial-aws.com {
+	reverse_proxy localhost:9001
+}

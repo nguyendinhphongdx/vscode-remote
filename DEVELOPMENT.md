@@ -467,7 +467,7 @@ npm run lint                    # ESLint
 Use the [`render.yaml`](./render.yaml) blueprint at the repo root. Render picks it up automatically when you create a Blueprint service.
 
 1. **Root directory**: `/` (monorepo root)
-2. **Build command**: `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @vscode-remote/shared build && pnpm --filter client build`
+2. **Build command**: `corepack enable && pnpm install --frozen-lockfile && pnpm --filter client build` (relay's `prebuild` script builds `shared` automatically first)
 3. **Start command**: `pnpm --filter client start`
 4. **Environment variables**:
    - `RELAY_SECRET` — must match agent's RELAY_SECRET

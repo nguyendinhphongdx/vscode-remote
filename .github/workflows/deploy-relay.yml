@@ -1,0 +1,36 @@
+name: Deploy Relay to GCP VM
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'relay/**'
+      - 'shared/**'
+      - 'deploy/**'
+      - '.github/workflows/deploy-relay.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.RELAY_DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.RELAY_VM_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy over SSH (pull + build + restart)
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "deploy@${{ secrets.RELAY_VM_HOST }}" '
+            set -euo pipefail
+            cd /opt/vscode-remote-relay
+            git fetch origin main
+            git reset --hard origin/main
+            corepack pnpm install --frozen-lockfile
+            pnpm --filter client build
+            sudo systemctl restart vscode-remote-relay
+            sudo systemctl status vscode-remote-relay --no-pager -l | head -20
+          '

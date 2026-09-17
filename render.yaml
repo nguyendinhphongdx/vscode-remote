@@ -8,7 +8,6 @@ services:
     buildCommand: |
       corepack enable && \
       pnpm install --frozen-lockfile && \
-      pnpm --filter @vscode-remote/shared build && \
       pnpm --filter client build
     startCommand: pnpm --filter client start
     envVars:
