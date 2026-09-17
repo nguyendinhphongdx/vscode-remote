@@ -37,9 +37,9 @@ gcloud compute instances add-tags <instance-name> --zone <zone> \
 
 Workflow [`deploy-relay.yml`](../.github/workflows/deploy-relay.yml) chạy mỗi khi push lên `main`
 đụng tới `relay/`, `shared/`, hoặc `deploy/` — SSH vào VM bằng user `deploy`, `git reset --hard
-origin/main`, `pnpm --filter client build` (script `prebuild` của `relay` tự build `shared` trước,
-khỏi gọi tay), rồi `sudo systemctl restart vscode-remote-relay` (user `deploy` chỉ có đúng quyền
-sudo cho lệnh restart/status service này, không có full sudo).
+origin/main`, `pnpm run build:relay:full` (script gốc ở root `package.json`, tự build `shared`
+trước rồi `relay`), rồi `sudo systemctl restart vscode-remote-relay` (user `deploy` chỉ có đúng
+quyền sudo cho lệnh restart/status service này, không có full sudo).
 
 ## 5. Cập nhật agent + voxta trỏ về relay mới
 
@@ -53,6 +53,6 @@ sudo cho lệnh restart/status service này, không có full sudo).
 ssh deploy@<vm-host>
 cd /opt/vscode-remote-relay && git log --oneline -5   # tìm commit cũ muốn quay lại
 git reset --hard <commit-cũ> && corepack pnpm install --frozen-lockfile \
-  && pnpm --filter client build
+  && pnpm run build:relay:full
 sudo systemctl restart vscode-remote-relay
 ```

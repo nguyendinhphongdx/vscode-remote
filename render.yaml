@@ -8,7 +8,7 @@ services:
     buildCommand: |
       corepack enable && \
       pnpm install --frozen-lockfile && \
-      pnpm --filter client build
+      pnpm run build:relay:full
     startCommand: pnpm --filter client start
     envVars:
       - key: NODE_ENV

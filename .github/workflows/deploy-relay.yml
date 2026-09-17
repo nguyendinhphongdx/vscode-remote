@@ -30,7 +30,7 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             corepack pnpm install --frozen-lockfile
-            pnpm --filter client build
+            pnpm run build:relay:full
             sudo systemctl restart vscode-remote-relay
             sudo systemctl status vscode-remote-relay --no-pager -l | head -20
           '
