@@ -2,6 +2,7 @@
   "name": "vscode-remote",
   "version": "0.3.17",
   "private": true,
+  "packageManager": "pnpm@10.14.0",
   "description": "Access your dev environment from anywhere — full VS Code experience in the browser with terminal, file explorer, git, and port forwarding.",
   "homepage": "https://vscode-remote.onrender.com",
   "repository": {
