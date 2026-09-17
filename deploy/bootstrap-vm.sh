@@ -64,8 +64,17 @@ sudo chmod 600 "/home/$DEPLOY_USER/.ssh/authorized_keys"
 sudo chown -R "$DEPLOY_USER:$DEPLOY_USER" "/home/$DEPLOY_USER/.ssh"
 
 echo "==> Cho phép ${DEPLOY_USER} restart đúng 1 service này mà không cần mật khẩu (không full sudo)"
-echo "$DEPLOY_USER ALL=(ALL) NOPASSWD: /bin/systemctl restart vscode-remote-relay, /bin/systemctl status vscode-remote-relay" \
+# Dùng `command -v systemctl` thay vì hardcode /bin/systemctl — trên Debian
+# trixie+ (usrmerge) /bin là symlink sang /usr/bin, nhưng sudoers so khớp
+# đường dẫn CHÍNH XÁC theo argv[0] đã resolve, không tự theo symlink; hardcode
+# sai path khiến NOPASSWD im lặng không áp dụng (sudo hỏi mật khẩu, CI không
+# có TTY để nhập → fail). `status*` có wildcard vì workflow gọi kèm
+# `--no-pager -l`, còn `restart` không có tham số thừa nên giữ nguyên khớp
+# chính xác.
+SYSTEMCTL_BIN="$(command -v systemctl)"
+echo "$DEPLOY_USER ALL=(ALL) NOPASSWD: ${SYSTEMCTL_BIN} restart vscode-remote-relay, ${SYSTEMCTL_BIN} status vscode-remote-relay*" \
   | sudo tee "/etc/sudoers.d/${DEPLOY_USER}-relay" >/dev/null
+sudo visudo -c -f "/etc/sudoers.d/${DEPLOY_USER}-relay" >/dev/null || { echo "FATAL: sudoers file for ${DEPLOY_USER} failed validation" >&2; exit 1; }
 sudo chmod 440 "/etc/sudoers.d/${DEPLOY_USER}-relay"
 
 echo "==> Clone repo (nếu chưa có)"
