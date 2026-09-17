@@ -181,28 +181,59 @@ function cmdConfig() {
 }
 
 function cmdLogs() {
-  const lines = args[0] || '50';
+  const lines = args.find((a) => a !== '-f' && a !== '--follow') || '50';
 
   if (!fs.existsSync(LOG_FILE)) {
     console.log('No log file found.');
     return;
   }
 
-  // Follow mode
   if (args.includes('-f') || args.includes('--follow')) {
-    const tail = spawn('tail', ['-f', LOG_FILE], { stdio: 'inherit' });
-    tail.on('error', () => {
-      // Fallback: read last lines
-      const content = fs.readFileSync(LOG_FILE, 'utf-8');
-      const lastLines = content.split('\n').slice(-parseInt(lines)).join('\n');
-      console.log(lastLines);
-    });
+    followLogFile(parseInt(lines));
     return;
   }
 
   const content = fs.readFileSync(LOG_FILE, 'utf-8');
   const lastLines = content.split('\n').slice(-parseInt(lines)).join('\n');
   console.log(lastLines);
+}
+
+/** Polls the log file for new bytes instead of shelling out to `tail -f` —
+ * that depended on a `tail` binary (missing on Windows, silently falling back
+ * to a single one-shot read with no indication follow mode wasn't actually
+ * working) and, even where `tail` exists, doesn't reliably keep following
+ * across `opencode restart` re-creating the file (new inode) since `-f`
+ * follows by descriptor, not name. This tracks file size directly and
+ * re-reads from 0 if the file shrinks (truncated or replaced). */
+function followLogFile(initialLines: number): void {
+  const initialContent = fs.readFileSync(LOG_FILE, 'utf-8');
+  const lastLines = initialContent.split('\n').slice(-initialLines).join('\n');
+  if (lastLines) process.stdout.write(lastLines + '\n');
+
+  let position = fs.statSync(LOG_FILE).size;
+
+  const interval = setInterval(() => {
+    let stat: fs.Stats;
+    try {
+      stat = fs.statSync(LOG_FILE);
+    } catch {
+      return; // Momentarily missing during rotation — retry next tick.
+    }
+    if (stat.size < position) position = 0; // Truncated/replaced — read from the top.
+    if (stat.size <= position) return;
+
+    const fd = fs.openSync(LOG_FILE, 'r');
+    const buffer = Buffer.alloc(stat.size - position);
+    fs.readSync(fd, buffer, 0, buffer.length, position);
+    fs.closeSync(fd);
+    position = stat.size;
+    process.stdout.write(buffer.toString('utf-8'));
+  }, 5000);
+
+  process.on('SIGINT', () => {
+    clearInterval(interval);
+    process.exit(0);
+  });
 }
 
 function cmdRun() {
@@ -447,9 +478,30 @@ function cmdPurge() {
   console.log('OpenCode Agent has been completely removed from this machine.');
 }
 
+/** Accepts either named flags (`--url`/`-url`, `--secret`/`-secret`, in any
+ * order) or the original 2 positional args — flags take priority so
+ * `opencode setup --url X positional-secret` isn't ambiguous. */
+function parseSetupArgs(): { url?: string; secret?: string } {
+  let url: string | undefined;
+  let secret: string | undefined;
+  const positional: string[] = [];
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--url' || arg === '-url') {
+      url = args[++i];
+    } else if (arg === '--secret' || arg === '-secret') {
+      secret = args[++i];
+    } else {
+      positional.push(arg);
+    }
+  }
+
+  return { url: url ?? positional[0], secret: secret ?? positional[1] };
+}
+
 function cmdSetup() {
-  const url = args[0];
-  const secret = args[1];
+  const { url, secret } = parseSetupArgs();
 
   if (!url && !secret) {
     const config = readConfig();
@@ -462,16 +514,21 @@ function cmdSetup() {
     console.log(`    Secret : ${currentSecret}`);
     console.log('');
     console.log('  Usage: opencode setup <relay-url> <relay-secret>');
+    console.log('     or: opencode setup --url <relay-url> --secret <relay-secret>');
+    console.log('');
+    console.log('  (Just the base URL is fine — /api/agent-ws is appended automatically.)');
     console.log('');
     console.log('  Example:');
-    console.log('    opencode setup wss://my-relay.example.com/api/agent-ws my-secret-key');
+    console.log('    opencode setup wss://my-relay.example.com my-secret-key');
+    console.log('    opencode setup --url wss://my-relay.example.com --secret my-secret-key');
     console.log('');
     return;
   }
 
   if (!url || !secret) {
-    console.error('Both <relay-url> and <relay-secret> are required.');
+    console.error('Both a relay URL and a relay secret are required.');
     console.error('Usage: opencode setup <relay-url> <relay-secret>');
+    console.error('   or: opencode setup --url <relay-url> --secret <relay-secret>');
     process.exit(1);
   }
 
@@ -516,7 +573,7 @@ function cmdHelp() {
   console.log('    opencode run            Run in foreground (debug)');
   console.log('    opencode upgrade         Upgrade to latest version');
   console.log('    opencode upgrade 0.4.0   Upgrade to specific version');
-  console.log('    opencode setup wss://relay.example.com/api/agent-ws my-secret');
+  console.log('    opencode setup wss://relay.example.com my-secret');
   console.log('    opencode purge --yes    Remove agent completely');
   console.log('');
 }

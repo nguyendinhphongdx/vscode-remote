@@ -27,7 +27,7 @@ async function main() {
     logger.error('Relay is not configured. Run:');
     logger.error('  opencode setup <relay-url> <relay-secret>');
     logger.error('Example:');
-    logger.error('  opencode setup wss://relay.example.com/api/agent-ws my-secret');
+    logger.error('  opencode setup wss://relay.example.com my-secret');
     process.exit(1);
   }
 

@@ -10,8 +10,18 @@
 
 import { BUILD_RELAY_URL, BUILD_RELAY_SECRET } from './buildConstants.generated.js';
 
+/** Users only need to give the relay's base URL (CLI `setup`, admin UI, or
+ * RELAY_URL env var) — the WS path is an implementation detail of this
+ * protocol, not something to memorize/retype. Idempotent: a URL that already
+ * ends with the path is left alone, so existing configs keep working. */
+function withAgentWsPath(url: string): string {
+  const trimmed = url.trim().replace(/\/+$/, '');
+  return trimmed.endsWith('/api/agent-ws') ? trimmed : `${trimmed}/api/agent-ws`;
+}
+
 export function resolveRelayUrl(persisted?: string | null): string {
-  return process.env.RELAY_URL || persisted || BUILD_RELAY_URL;
+  const url = process.env.RELAY_URL || persisted || BUILD_RELAY_URL;
+  return url ? withAgentWsPath(url) : url;
 }
 
 export function resolveRelaySecret(persisted?: string | null): string {
