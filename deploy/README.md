@@ -53,7 +53,7 @@ quyền sudo cho lệnh restart/status service này, không có full sudo).
 ```bash
 ssh deploy@<vm-host>
 cd /opt/vscode-remote-relay && git log --oneline -5   # tìm commit cũ muốn quay lại
-git reset --hard <commit-cũ> && corepack pnpm install --frozen-lockfile \
+git reset --hard <commit-cũ> && corepack pnpm install --frozen-lockfile --filter client... \
   && pnpm run build:relay:full
 sudo systemctl restart vscode-remote-relay
 ```

@@ -91,9 +91,11 @@ cat <<'EOF'
    sudo cp /opt/vscode-remote-relay/deploy/Caddyfile /etc/caddy/Caddyfile
    # Sửa domain thật trong /etc/caddy/Caddyfile trước khi reload.
 
-3. Build lần đầu + khởi động service (script gốc `build:relay:full` tự build `shared` trước):
+3. Build lần đầu + khởi động service (script gốc `build:relay:full` tự build `shared` trước;
+   `--filter client...` chỉ cài `relay` + dependency của nó, KHÔNG cài `agent` — agent có
+   `node-pty` cần `make`/build-essential để compile native, mà VM này không cần chạy agent):
    cd /opt/vscode-remote-relay
-   sudo -u deploy corepack pnpm install --frozen-lockfile
+   sudo -u deploy corepack pnpm install --frozen-lockfile --filter client...
    sudo -u deploy pnpm run build:relay:full
    sudo systemctl daemon-reload
    sudo systemctl enable --now vscode-remote-relay
