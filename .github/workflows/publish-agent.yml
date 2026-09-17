@@ -38,12 +38,16 @@ jobs:
         working-directory: agent
         run: npm version ${{ inputs.version }} --no-git-tag-version
 
+      # No RELAY_URL/RELAY_SECRET here on purpose — this package is a public,
+      # self-hostable tool (anyone runs their own relay). Baking a real
+      # secret into a publicly downloadable npm package would ship it in
+      # plaintext (dist/index.js) to everyone who installs it, and it's
+      # useless to someone hosting their own relay anyway. Every user must
+      # run `opencode setup` (or set RELAY_URL/RELAY_SECRET env vars)
+      # against their own relay instance.
       - name: Build agent
         working-directory: agent
         run: pnpm build
-        env:
-          RELAY_URL: ${{ secrets.RELAY_URL }}
-          RELAY_SECRET: ${{ secrets.RELAY_SECRET }}
 
       - name: Publish to npm
         working-directory: agent
