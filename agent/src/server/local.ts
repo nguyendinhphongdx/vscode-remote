@@ -94,6 +94,16 @@ export function createLocalServer(relayClient: RelayClient): void {
     }
   });
 
+  // API: who to ask for a relay URL/secret, if the deployer configured one.
+  // Read fresh from env (not configStore) — this is deployment-wide contact
+  // info set by whoever runs the relay, not a per-agent user setting.
+  app.get('/api/contact', (_req, res) => {
+    res.json({
+      email: process.env.CONTACT_EMAIL || null,
+      url: process.env.CONTACT_URL || null,
+    });
+  });
+
   // API: get settings
   app.get('/api/settings', (_req, res) => {
     const store = configStore.get();

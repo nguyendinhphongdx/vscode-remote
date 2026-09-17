@@ -969,6 +969,18 @@ export default function LandingPage() {
                         </>
                       )}
                     </button>
+                    {process.env.NEXT_PUBLIC_CONTACT_EMAIL && (
+                      <p className="text-center text-xs" style={{ color: "#52525b" }}>
+                        Chưa có Machine ID/Password?{" "}
+                        <a
+                          href={`mailto:${process.env.NEXT_PUBLIC_CONTACT_EMAIL}?subject=${encodeURIComponent("Xin relay access")}`}
+                          className="underline"
+                          style={{ color: "#71717a" }}
+                        >
+                          Liên hệ {process.env.NEXT_PUBLIC_CONTACT_EMAIL}
+                        </a>
+                      </p>
+                    )}
                   </form>
                 ) : (
                   <form onSubmit={handleOtpVerify} className="space-y-3">

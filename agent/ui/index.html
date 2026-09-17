@@ -331,6 +331,10 @@
               <label>Relay Secret</label>
               <input type="password" id="settingRelaySecret" class="setting-input" placeholder="" />
               <div id="settingRelaySecretHint" style="font-size:12px;color:#888;margin-top:4px"></div>
+              <div id="contactButtons" style="display:none;gap:8px;margin-top:8px">
+                <button type="button" class="btn-secondary" id="contactEmailBtn" style="display:none;font-size:12px;padding:4px 10px" onclick="requestSecretByEmail()">Request via email</button>
+                <button type="button" class="btn-secondary" id="contactUrlBtn" style="display:none;font-size:12px;padding:4px 10px" onclick="requestSecretByUrl()">Open landing page</button>
+              </div>
             </div>
             <button class="btn-secondary" id="saveSettingsBtn" onclick="saveSettings()">Save Settings</button>
             <div class="success" id="settingsSaved" style="display:none">Settings saved.</div>
@@ -854,12 +858,44 @@
     });
 
     // ===== Settings =====
+    let contactInfo = { email: null, url: null };
+
     function toggleSettings() {
       const body = document.getElementById('settingsBody');
       const arrow = document.getElementById('settingsArrow');
       const isOpen = body.classList.toggle('open');
       arrow.classList.toggle('open', isOpen);
-      if (isOpen) fetchSettings();
+      if (isOpen) {
+        fetchSettings();
+        fetchContact();
+      }
+    }
+
+    async function fetchContact() {
+      try {
+        const res = await fetch('/api/contact');
+        contactInfo = await res.json();
+      } catch {
+        contactInfo = { email: null, url: null };
+      }
+      const emailBtn = document.getElementById('contactEmailBtn');
+      const urlBtn = document.getElementById('contactUrlBtn');
+      emailBtn.style.display = contactInfo.email ? '' : 'none';
+      urlBtn.style.display = contactInfo.url ? '' : 'none';
+      document.getElementById('contactButtons').style.display = (contactInfo.email || contactInfo.url) ? 'flex' : 'none';
+    }
+
+    function requestSecretByEmail() {
+      if (!contactInfo.email) return;
+      const machineId = document.getElementById('machineId')?.textContent?.trim() || '';
+      const subject = encodeURIComponent('Relay secret request' + (machineId ? ` — ${machineId}` : ''));
+      const body = encodeURIComponent(`Xin relay URL + secret cho máy này${machineId ? ` (Machine ID: ${machineId})` : ''}.`);
+      window.location.href = `mailto:${contactInfo.email}?subject=${subject}&body=${body}`;
+    }
+
+    function requestSecretByUrl() {
+      if (!contactInfo.url) return;
+      window.open(contactInfo.url, '_blank', 'noopener,noreferrer');
     }
 
     async function fetchSettings() {

@@ -82,7 +82,10 @@ Token **không** được truyền qua URL. Thay vào đó:
 
 ## Xác thực Agent ↔ Relay
 
-Agent kết nối tới relay và gửi `RELAY_SECRET` để đăng ký:
+`RELAY_SECRET` được cấu hình qua `opencode setup --url <relay-url> --secret <secret>` (hoặc Admin
+UI → Settings → Relay Secret) — không bake sẵn trong package npm publish, mỗi relay tự có secret
+riêng, khớp với `RELAY_SECRET` trong `.env` của chính relay đó. Agent kết nối tới relay và gửi
+secret này để đăng ký:
 
 ```
 Agent → Relay
